@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Threading;
 using ZdCache.Common;
 using ZdCache.Common.ActionModels;
 using ZdCache.Common.CDataType;
