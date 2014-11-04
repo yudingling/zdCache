@@ -207,17 +207,20 @@ namespace ZdCache.SlaveCache
         private ConcurrentStack<HitInfo> GetQueue(byte categoryID, bool createWhenNotExist)
         {
             ConcurrentStack<HitInfo> destQueue = null;
-            if (this.myHitter.TryGetValue(categoryID, out destQueue))
-                return destQueue;
-            else
-            {
-                //注意此处的逻辑，因为多线程访问的缘故，必须先 tryadd，再 tryget，
-                if (createWhenNotExist)
-                    this.myHitter.TryAdd(categoryID, new ConcurrentStack<HitInfo>());
 
-                this.myHitter.TryGetValue(categoryID, out destQueue);
-                return destQueue;
+            if (!this.myHitter.TryGetValue(categoryID, out destQueue)
+                && createWhenNotExist)
+            {
+                //注意此处的写法，一定要保证数据来自于字典中, 但不要采用 tryadd 紧接着再 tryget，那样在最坏的情况下效率减半
+                destQueue = new ConcurrentStack<HitInfo>();
+                if (!this.myHitter.TryAdd(categoryID, destQueue))
+                {
+                    destQueue = null;
+                    this.myHitter.TryGetValue(categoryID, out destQueue);
+                }
             }
+
+            return destQueue;
         }
 
         /// <summary>
