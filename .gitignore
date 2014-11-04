@@ -1,3 +1,4 @@
+*.suo
 *.pdb
 *.dll
 *.exe
@@ -51,5 +52,3 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-
-*.suo
