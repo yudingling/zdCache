@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{26D8E131-2BEC-41EA-8DF8-B62890AD1C0C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ZdCache.Common</RootNamespace>
+    <AssemblyName>ZdCache.Common</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Async.cs" />
+    <Compile Include="CacheCommon\CallArgsModel.cs" />
+    <Compile Include="CacheCommon\PackageDataArg.cs" />
+    <Compile Include="CacheCommon\PackageDataContainer.cs" />
+    <Compile Include="CDataType\BaseCacheDataType.cs" />
+    <Compile Include="CDataType\CacheBitmap.cs" />
+    <Compile Include="CDataType\CacheNull.cs" />
+    <Compile Include="CDataType\ICacheDataType.cs" />
+    <Compile Include="CacheCommon\DataArrangement.cs" />
+    <Compile Include="CacheCommon\StatusInfo.cs" />
+    <Compile Include="CacheCommon\ConstParams.cs" />
+    <Compile Include="EventLogMgr.cs" />
+    <Compile Include="Logger.cs" />
+    <Compile Include="ActionModels\ActionKind.cs" />
+    <Compile Include="ActionModels\ActionResult.cs" />
+    <Compile Include="CDataType\CacheSerializableObject.cs" />
+    <Compile Include="CacheCommon\Attribute.cs" />
+    <Compile Include="Function.cs" />
+    <Compile Include="CacheCommon\Initial.cs" />
+    <Compile Include="MyConcurrentList.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SizeGetter\DefaultSizeGetter.cs" />
+    <Compile Include="SizeGetter\ISizeGetter.cs" />
+    <Compile Include="SizeGetter\SizeGetResult.cs" />
+    <Compile Include="SleepHelper.cs" />
+    <Compile Include="SThreadPool.cs" />
+    <Compile Include="SThreadTask.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
