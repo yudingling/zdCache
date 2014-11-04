@@ -52,10 +52,13 @@ namespace ZdCache.Common.CacheCommon
             PackageDataArg tempArg = null;
             if (!this.allBuiltArgs.TryGetValue(callId, out tempArg))
             {
-                this.allBuiltArgs.TryAdd(callId, new PackageDataArg(callId, totalCount));
-
-                //注意，一定要保证 tempArg 是取自于 allBuiltArgs。 所以上面必须得是先 tryAdd，下面再 tryGet
-                this.allBuiltArgs.TryGetValue(callId, out tempArg);
+                //注意此处的写法，一定要保证数据来自于字典中, 但不要采用 tryadd 紧接着再 tryget，那样在最坏的情况下效率减半
+                tempArg = new PackageDataArg(callId, totalCount);
+                if (!this.allBuiltArgs.TryAdd(callId, tempArg))
+                {
+                    tempArg = null;
+                    this.allBuiltArgs.TryGetValue(callId, out tempArg);
+                }
             }
 
             return tempArg;

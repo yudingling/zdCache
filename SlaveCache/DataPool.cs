@@ -175,17 +175,20 @@ namespace ZdCache.SlaveCache
         private ConcurrentDictionary<string, ICacheDataType> GetCategory(byte categoryID, bool createWhenNotExist)
         {
             ConcurrentDictionary<string, ICacheDataType> destDic = null;
-            if (this.container.TryGetValue(categoryID, out destDic))
-                return destDic;
-            else
-            {
-                //注意此处的逻辑，因为多线程访问的缘故，必须先 tryadd，再 tryget，
-                if (createWhenNotExist)
-                    this.container.TryAdd(categoryID, new ConcurrentDictionary<string, ICacheDataType>());
 
-                this.container.TryGetValue(categoryID, out destDic);
-                return destDic;
+            if (!this.container.TryGetValue(categoryID, out destDic)
+                && createWhenNotExist)
+            {
+                //注意此处的写法，一定要保证数据来自于字典中, 但不要采用 tryadd 紧接着再 tryget，那样在最坏的情况下效率减半
+                destDic = new ConcurrentDictionary<string, ICacheDataType>();
+                if (!this.container.TryAdd(categoryID, destDic))
+                {
+                    destDic = null;
+                    this.container.TryGetValue(categoryID, out destDic);
+                }
             }
+
+            return destDic;
         }
 
         /// <summary>
