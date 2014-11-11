@@ -32,16 +32,6 @@ namespace ZdCache.PorterBase
         #region IPorter 成员
 
         /// <summary>
-        /// 由之类去实现
-        /// </summary>
-        public override void Send(byte[] data) { }
-
-        /// <summary>
-        /// 由之类去实现
-        /// </summary>
-        public override void Send(int tokenID, byte[] data) { }
-
-        /// <summary>
         /// 关闭 socket， 释放占用的资源
         /// </summary>
         public override void Close()
@@ -54,7 +44,7 @@ namespace ZdCache.PorterBase
                 }
                 catch (Exception ex)
                 {
-                    this.TraceError(string.Format("关闭本地socket失败：{0}", ex.Message));
+                    this.TraceError(ErrorType.Other, 0, string.Format("close local socket failed：{0}", ex.Message));
                 }
                 finally
                 {

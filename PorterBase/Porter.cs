@@ -16,16 +16,31 @@ namespace ZdCache.PorterBase
 
         #region IPorter 成员
 
-        public abstract void Send(byte[] data);
+        /// <summary>
+        /// 由子类去实现
+        /// </summary>
+        public virtual void Send(byte[] data) { }
 
-        public abstract void Send(int tokenID, byte[] data);
+        /// <summary>
+        /// 由子类去实现
+        /// </summary>
+        public virtual void Send(int tokenID, byte[] data) { }
 
+        /// <summary>
+        /// 由子类去实现
+        /// </summary>
+        /// <param name="tokenID"></param>
+        public virtual void DropClient(int tokenID) { }
+
+        /// <summary>
+        /// 此方法 abstract 掉，强制子类实现
+        /// </summary>
         public abstract void Close();
 
-        public void TraceError(string msg)
+        public void TraceError(ErrorType errorType, int tokenID, string msg)
         {
             if (this.errorTracer != null)
-                this.errorTracer(msg);
+                this.errorTracer(errorType, tokenID, msg);
         }
 
         #endregion

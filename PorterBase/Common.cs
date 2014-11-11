@@ -12,10 +12,14 @@ namespace ZdCache.PorterBase
     public delegate void PorterReceive(int tokenID, List<byte[]> data);
 
     /// <summary>
+    /// porter 错误类型
+    /// </summary>
+    public enum ErrorType { Receive, Send, Other }
+
+    /// <summary>
     /// 输出log 的委托，此回调应该自行处理所有异常，不应抛出
     /// </summary>
-    /// <param name="msg"></param>
-    public delegate void ErrorTracer(string msg);
+    public delegate void ErrorTracer(ErrorType errorType, int tokenID, string msg);
 
 
     /// <summary>

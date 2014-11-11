@@ -12,7 +12,7 @@ using ZdCache.Common.CacheCommon;
 namespace ZdCache.SlaveCache
 {
     public delegate void DataFromBinding(string bindingID, CallArgsModel model);
-    public delegate void SendErrorFromBinding(string bindingID, Exception ex);
+    public delegate void SendErrorFromBinding(string bindingID);
 
     public sealed class ClientBinding : BasePorter
     {
@@ -23,11 +23,12 @@ namespace ZdCache.SlaveCache
 
         private DataFromBinding onData;
         private SendErrorFromBinding onSendError;
+
         private PackageDataContainer packageContainer;
 
-        public ClientBinding(string bindingId, SocketClientSettings setting, ErrorTracer tracer,
+        public ClientBinding(string bindingId, SocketClientSettings setting,
             DataFromBinding dataFromBinding, SendErrorFromBinding sendErrorFromBinding)
-            : base(setting, tracer)
+            : base()
         {
             this.id = bindingId;
 
@@ -35,6 +36,8 @@ namespace ZdCache.SlaveCache
             this.onSendError = sendErrorFromBinding;
 
             this.packageContainer = new PackageDataContainer();
+
+            this.InitPorter(setting, new ErrorTracer(this.PBLogError));
         }
 
         protected override void DataReceived(List<byte[]> data)
@@ -45,12 +48,12 @@ namespace ZdCache.SlaveCache
                 this.onData(this.id, args);
         }
 
-        protected override void SendErrorOccured(Exception ex)
+        private void PBLogError(ErrorType errorType, int tokenID, string error)
         {
-            if (this.onSendError != null)
-                this.onSendError(this.id, ex);
+            Logger.WriteLog(LogMsgType.Error, error);
 
-            base.SendErrorOccured(ex);
+            if (errorType == ErrorType.Send && this.onSendError != null)
+                this.onSendError(this.id);
         }
 
         /// <summary>

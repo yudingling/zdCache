@@ -8,6 +8,7 @@ using ZdCache.Common;
 using ZdCache.MasterCache.LoadbalanceStrategy;
 using ZdCache.Common.CacheCommon;
 using System.Threading.Tasks;
+using ZdCache.PorterBase;
 
 namespace ZdCache.MasterCache
 {
@@ -40,7 +41,7 @@ namespace ZdCache.MasterCache
                 string.Format("master 初始化成功[成功绑定到端口：{0}]！", port));
         }
 
-        private void PBLogError(string error)
+        private void PBLogError(ErrorType errorType, int tokenID, string error)
         {
             Logger.WriteLog(LogMsgType.Error, this.masterName, error);
         }

@@ -29,8 +29,14 @@ namespace ZdCache.PorterBase
         void Close();
 
         /// <summary>
+        /// 关闭 client 端，一般由 server 调用，进行主动的资源释放 （比如在短连接情况下【udp或者tcp，但实际业务存在需要主动断开】，完成业务的回复后，就需要断开，以便重用相关资源）
+        /// </summary>
+        /// <param name="tokenID"></param>
+        void DropClient(int tokenID);
+
+        /// <summary>
         /// 输出错误
         /// </summary>
-        void TraceError(string msg);
+        void TraceError(ErrorType errorType, int tokenID, string msg);
     }
 }

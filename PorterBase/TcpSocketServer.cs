@@ -11,7 +11,7 @@ namespace ZdCache.PorterBase
 {
     /// <summary>
     /// Socket Server with TCP Protocol
-    /// 1、采用window 下的 IOCP 实现 （SocketAsyncEventArgs）
+    /// 1、window 下的 IOCP 实现 （SocketAsyncEventArgs）
     /// 2、3层独立 accept, send/receive , callback
     /// </summary>
     public class TcpSocketServer : SocketBase
@@ -170,7 +170,7 @@ namespace ZdCache.PorterBase
             if (errors.Count > 0)
             {
                 foreach (string msg in errors)
-                    this.TraceError(msg);
+                    this.TraceError(ErrorType.Receive, token.ID, msg);
             }
 
             //继续读取 (读取未读取完的数据，或者开启一个新的读取)
@@ -198,11 +198,7 @@ namespace ZdCache.PorterBase
             UToken token = recSAEA.UserToken as UToken;
 
             SocketAsyncEventArgs outValue;
-            //注意这里的写法，不能使用 containsKey 的方式： 存在以下情况：
-            //   当手动调用 DropClient 的时候，将会执行一次关闭操作，并将 SAEA 放回池中， 但在 ShutDown 的过程中，同时也会触发 SAEA 的
-            //   回调事件，并且 recAndSendSAEA.SocketError 为 Error， 这样的话，也会触发socket 的关闭以及将 SAEA 放回池中，这将导致
-            //   重入（往 SAEA 池中多次加入同一个对象）。  
-            //为避免这个情况，在进行 keepAccepttedSAEAList 判断的时候，就应该进行操作的过滤，即保证只有在 TryRemove 成功时，才进行 SAEA 的回收
+            //注意这里的写法，不能使用 containsKey 的方式，因为异步
             if (this.keepAccepttedSAEAList.TryRemove(token.ID, out outValue))
             {
                 //重置 token
@@ -395,7 +391,7 @@ namespace ZdCache.PorterBase
             if (errors.Count > 0)
             {
                 foreach (string msg in errors)
-                    this.TraceError(msg);
+                    this.TraceError(ErrorType.Send, token.ID, msg);
             }
         }
 
@@ -467,7 +463,15 @@ namespace ZdCache.PorterBase
             base.Close();
         }
 
-
+        /// <summary>
+        /// tcp 的 dropClient 不做处理。
+        ///  因为异步的关系，可能该连接还存在很多 SAEA 处于发送中，如果断开了，则将发送失败，这与逻辑相违背。
+        ///  故对于 tcp 来说，断开操作只由 client 端进行。 server 端不处理。
+        /// </summary>
+        /// <param name="tokenID"></param>
+        public override void DropClient(int tokenID)
+        {
+        }
 
         #endregion
     }

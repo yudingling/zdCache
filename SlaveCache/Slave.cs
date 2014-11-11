@@ -9,6 +9,7 @@ using ZdCache.Common;
 using ZdCache.Common.ActionModels;
 using ZdCache.SlaveCache.PassiveExpireStrategy;
 using ZdCache.Common.CacheCommon;
+using ZdCache.PorterBase;
 
 namespace ZdCache.SlaveCache
 {
@@ -55,10 +56,7 @@ namespace ZdCache.SlaveCache
             GenerateBinding(this.slaveCfg.Masters.Values, this.slaveCfg.RecvAndSendTimeout, this.slaveCfg.CallBackThreadCount);
         }
 
-        private void PBLogError(string error)
-        {
-            Logger.WriteLog(LogMsgType.Error, error);
-        }
+
 
         /// <summary>
         /// 向服务端注册此 slave， 实际上是发送一个 statusInfo
@@ -92,7 +90,7 @@ namespace ZdCache.SlaveCache
 
             CallArgsModel callModel = new CallArgsModel(Guid.NewGuid(), ActionKind.APStatusInfo, cachedObj);
 
-            this.dispatcher.Dispatch(callModel);            
+            this.dispatcher.Dispatch(callModel);
         }
 
         private void GenerateBinding(ICollection<SlaveCfg.IpAndPort> ipAndPorts, int recvAndSendTimeout, int callBackThreadCount)
@@ -124,7 +122,7 @@ namespace ZdCache.SlaveCache
                                 callBackThreadCount);
 
                             //1、创建 binding
-                            binding = new ClientBinding(item.ID, sc, new PorterBase.ErrorTracer(PBLogError),
+                            binding = new ClientBinding(item.ID, sc,
                                 new DataFromBinding(this.CallFromMaster), new SendErrorFromBinding(this.OnSendError));
 
                             //2、注册
@@ -217,7 +215,7 @@ namespace ZdCache.SlaveCache
         /// <summary>
         /// 发送错误时的回调
         /// </summary>
-        private void OnSendError(string bindingId, Exception exception)
+        private void OnSendError(string bindingId)
         {
             //如果发送失败，则表示与 master 的连接可能断开了，需要重新注册
             try

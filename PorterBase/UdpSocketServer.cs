@@ -11,7 +11,7 @@ namespace ZdCache.PorterBase
 {
     /// <summary>
     /// Socket Server with UDP Protocol
-    /// 1、采用window 下的 IOCP 实现 （SocketAsyncEventArgs）
+    /// 1、window 下的 IOCP 实现 （SocketAsyncEventArgs）
     /// 2、2层独立 send/receive , callback
     /// </summary>
     public class UdpSocketServer : SocketBase
@@ -144,7 +144,7 @@ namespace ZdCache.PorterBase
             if (errors.Count > 0)
             {
                 foreach (string msg in errors)
-                    this.TraceError(msg);
+                    this.TraceError(ErrorType.Receive, token.ID, msg);
             }
 
             //判断此 recvSAEA 是否需要继续接收
@@ -165,21 +165,24 @@ namespace ZdCache.PorterBase
         /// <param name="recSAEA"></param>
         private void HandleBadRecv(SocketAsyncEventArgs recSAEA)
         {
-            UToken token = recSAEA.UserToken as UToken;
+            RemoveKeepAccepttedSAEAList((recSAEA.UserToken as UToken).ID);
+        }
 
-            SocketAsyncEventArgs outValue;
-            //注意这里的写法，不能使用 containsKey 的方式  
-            //因在接收时的异步特性，在进行 keepAccepttedSAEAList 判断的时候，就应该进行操作的过滤，即保证只有在 TryRemove 成功时，才进行 SAEA 的回收
-            if (this.keepAccepttedSAEAList.TryRemove(token.ID, out outValue))
+        private void RemoveKeepAccepttedSAEAList(int tokenID)
+        {
+            SocketAsyncEventArgs saeaForRemove;
+
+            //注意这里的写法，不能使用 containsKey 的方式，防止异步导致的重入
+            if (this.keepAccepttedSAEAList.TryRemove(tokenID, out saeaForRemove))
             {
                 //重置 token
-                token.Reset();
+                (saeaForRemove.UserToken as UToken).Reset();
 
                 //重置 RemoteEndPoint
-                recSAEA.RemoteEndPoint = this.serverSetting.EP;
+                saeaForRemove.RemoteEndPoint = this.serverSetting.EP;
 
                 //push 回 SAEA 池中，复用
-                this.recvSAEAPool.Push(outValue);
+                this.recvSAEAPool.Push(saeaForRemove);
             }
         }
 
@@ -315,7 +318,7 @@ namespace ZdCache.PorterBase
             if (errors.Count > 0)
             {
                 foreach (string msg in errors)
-                    this.TraceError(msg);
+                    this.TraceError(ErrorType.Send, token.ID, msg);
             }
         }
 
@@ -359,6 +362,11 @@ namespace ZdCache.PorterBase
             }
             else
                 throw new Exception("此 tokenID 对应的客户端不存在，无法向其发送数据！");
+        }
+
+        public override void DropClient(int tokenID)
+        {
+            RemoveKeepAccepttedSAEAList(tokenID);
         }
 
         #endregion
