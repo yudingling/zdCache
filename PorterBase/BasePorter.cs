@@ -33,6 +33,8 @@ namespace ZdCache.PorterBase
             //只允许初始化一次
             lock (lockObj)
             {
+                Close();
+
                 if (this.porter == null)
                 {
                     //设置接收事件
@@ -80,7 +82,7 @@ namespace ZdCache.PorterBase
             }
             catch (Exception ex)
             {
-                this.porter.TraceError("接收/处理数据出错：" + ex.Message + " " + ex.StackTrace);
+                this.porter.TraceError(ErrorType.Receive, tokenID, string.Format("receive error: {0} {1}", ex.Message, ex.StackTrace));
             }
         }
 
@@ -98,18 +100,6 @@ namespace ZdCache.PorterBase
         /// <param name="allBytes"></param>
         protected virtual void DataReceived(List<byte[]> data) { }
 
-        /// <summary>
-        /// 发送数据异常时的回调 (client 用)
-        /// </summary>
-        /// <param name="ex"></param>
-        protected virtual void SendErrorOccured(Exception ex){}
-
-        /// <summary>
-        /// 发送数据异常时的回调 (server 用)
-        /// </summary>
-        /// <param name="tokenID"></param>
-        /// <param name="ex"></param>
-        protected virtual void SendErrorOccured(int tokenID, Exception ex){}
 
         #region 公开 IPorter 接口成员
 
@@ -125,8 +115,7 @@ namespace ZdCache.PorterBase
             }
             catch (Exception ex)
             {
-                this.porter.TraceError(string.Format("send error: {0} {1}", ex.Message, ex.StackTrace));
-                this.SendErrorOccured(ex);
+                this.porter.TraceError(ErrorType.Send, 0, string.Format("send error: {0} {1}", ex.Message, ex.StackTrace));
             }
         }
 
@@ -143,8 +132,19 @@ namespace ZdCache.PorterBase
             }
             catch (Exception ex)
             {
-                this.porter.TraceError(string.Format("tokenId[{0}] send error: {1} {2}", tokenID, ex.Message, ex.StackTrace));
-                this.SendErrorOccured(tokenID, ex);
+                this.porter.TraceError(ErrorType.Send, tokenID, string.Format("tokenId[{0}] send error: {1} {2}", tokenID, ex.Message, ex.StackTrace));
+            }
+        }
+
+        public void DropClient(int tokenID)
+        {
+            try
+            {
+                this.porter.DropClient(tokenID);
+            }
+            catch (Exception ex)
+            {
+                this.porter.TraceError(ErrorType.Other, tokenID, string.Format("tokenId[{0}] drop error: {1} {2}", tokenID, ex.Message, ex.StackTrace));
             }
         }
 
@@ -153,7 +153,18 @@ namespace ZdCache.PorterBase
         /// </summary>
         public virtual void Close()
         {
-            this.porter.Close();
+            try
+            {
+                if (this.porter != null)
+                {
+                    this.porter.Close();
+                    this.porter = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                this.porter.TraceError(ErrorType.Other, 0, string.Format("close error: {0} {1}", ex.Message, ex.StackTrace));
+            }
         }
 
         #endregion

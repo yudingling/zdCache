@@ -62,6 +62,8 @@
     <Compile Include="CacheCommon\DataArrangement.cs" />
     <Compile Include="CacheCommon\StatusInfo.cs" />
     <Compile Include="CacheCommon\ConstParams.cs" />
+    <Compile Include="DefferCallBack\Deffered.cs" />
+    <Compile Include="DefferCallBack\Promise.cs" />
     <Compile Include="EventLogMgr.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="ActionModels\ActionKind.cs" />

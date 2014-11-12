@@ -84,7 +84,7 @@ namespace ZdCache.PorterBase
             catch (Exception ex)
             {
                 //这里要进行异常处理，因为 datareceived 是被动触发的，不然抛出，线程没有地方可处理，服务就挂了
-                this.TraceError("Comm 口接收数据异常:" + ex.Message);
+                this.TraceError(ErrorType.Receive, token.ID, "comm receive error:" + ex.Message);
             }
             finally
             {
@@ -95,7 +95,7 @@ namespace ZdCache.PorterBase
                 if (errors.Count > 0)
                 {
                     foreach (string msg in errors)
-                        this.TraceError(msg);
+                        this.TraceError(ErrorType.Receive, token.ID, msg);
                 }
 
                 //ClearInBuffer();
@@ -171,14 +171,9 @@ namespace ZdCache.PorterBase
             }
             catch (Exception ex)
             {
-                this.TraceError(string.Format("关闭Comm失败：{0}", ex.Message));
+                this.TraceError(ErrorType.Other, 0, string.Format("close Comm failed：{0}", ex.Message));
             }
         }
-
-        /// <summary>
-        /// 啥事不干， 不关注
-        /// </summary>
-        public override void Send(int tokenID, byte[] data) { }
 
         #endregion
     }

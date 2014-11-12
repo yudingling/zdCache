@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace ZdCache.Common
 {
@@ -11,7 +12,7 @@ namespace ZdCache.Common
     /// <typeparam name="T"></typeparam>
     public class MyConcurrentList<T>
     {
-        private object lockObj = new object();
+        private ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
         private List<T> list = new List<T>();
 
@@ -21,9 +22,16 @@ namespace ZdCache.Common
         /// <param name="value"></param>
         public void Append(T value)
         {
-            lock (lockObj)
+            if (rwLock.TryEnterWriteLock(-1))
             {
-                list.Add(value);
+                try
+                {
+                    list.Add(value);
+                }
+                finally
+                {
+                    rwLock.ExitWriteLock();
+                }
             }
         }
 
@@ -33,17 +41,26 @@ namespace ZdCache.Common
         public bool RemoveFirst(out T value)
         {
             value = default(T);
-            if (list.Count > 0)
+
+            if (rwLock.TryEnterWriteLock(-1))
             {
-                lock (lockObj)
+                try
                 {
-                    value = list[0];
-                    list.RemoveAt(0);
-                    return true;
+                    if (list.Count > 0)
+                    {
+
+                        value = list[0];
+                        list.RemoveAt(0);
+                        return true;
+                    }
+                }
+                finally
+                {
+                    rwLock.ExitWriteLock();
                 }
             }
-            else
-                return false;
+
+            return false;
         }
 
         /// <summary>
@@ -51,7 +68,39 @@ namespace ZdCache.Common
         /// </summary>
         public bool Contains(T value)
         {
+            if (rwLock.TryEnterReadLock(-1))
+            {
+                try
+                {
+                    return list.Contains(value);
+                }
+                finally
+                {
+                    rwLock.ExitReadLock();
+                }
+            }
+
             return list.Contains(value);
+        }
+
+        public int Count
+        {
+            get
+            {
+                if (rwLock.TryEnterReadLock(-1))
+                {
+                    try
+                    {
+                        return list.Count;
+                    }
+                    finally
+                    {
+                        rwLock.ExitReadLock();
+                    }
+                }
+
+                return list.Count;
+            }
         }
     }
 }

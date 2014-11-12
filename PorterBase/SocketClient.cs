@@ -143,7 +143,7 @@ namespace ZdCache.PorterBase
             if (errors.Count > 0)
             {
                 foreach (string msg in errors)
-                    this.TraceError(msg);
+                    this.TraceError(ErrorType.Receive, token.ID, msg);
             }
 
             //继续读取 (读取未读取完的数据，或者开启一个新的读取)
@@ -231,7 +231,7 @@ namespace ZdCache.PorterBase
             if (errors.Count > 0)
             {
                 foreach (string msg in errors)
-                    this.TraceError(msg);
+                    this.TraceError(ErrorType.Send, token.ID, msg);
             }
         }
 
