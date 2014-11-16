@@ -102,6 +102,14 @@ namespace ZdCache.MasterCache
             }
         }
 
+        public override void Close()
+        {
+            if (this.packageContainer != null)
+                this.packageContainer.Dispose();
+
+            base.Close();
+        }
+
         #region slave add/remove/get
 
         /// <summary>

@@ -9,17 +9,20 @@ using ZdCache.MasterCache.LoadbalanceStrategy;
 using ZdCache.Common.CacheCommon;
 using System.Threading.Tasks;
 using ZdCache.PorterBase;
+using ZdCache.Common.DefferCallBack;
 
 namespace ZdCache.MasterCache
 {
     /// <summary>
     /// 缓存 Master
     /// </summary>
-    public class Master
+    public class Master : Deffered
     {
         private string masterName;
         private Binding myBinding;
         private BalanceHandler balancer;
+
+        private Type successType = typeof(SuccessInMaster), failType = typeof(FailInMaster);
 
         public Master(int port, int recvAndSendTimeout)
         {
@@ -99,6 +102,24 @@ namespace ZdCache.MasterCache
                 return retList[0];
 
             return null;
+        }
+
+        /// <summary>
+        /// 查找缓存，异步
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public Promise GetAsync(ICacheDataType key)
+        {
+            if (key == null)
+                throw new Exception("param 'key' can not be null");
+
+            CallGet cf = new CallGet(true);
+            List<ICacheDataType> retList;
+
+            cf.Process(this.myBinding.Slaves, key, out retList);
+
+            return this.CreatePromise(cf.ID, this.successType, this.failType);
         }
 
         /// <summary>

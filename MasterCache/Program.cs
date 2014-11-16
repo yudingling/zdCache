@@ -40,10 +40,10 @@ namespace ZdCache.MasterCache
                 int.Parse(ConfigurationManager.AppSettings["RevcAndSendTimeout"].ToString().Trim()));
 
             AsyncCall call1 = new AsyncCall(new AsyncMethod(Test1), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
-            //AsyncCall call2 = new AsyncCall(new AsyncMethod(Test2), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
+            AsyncCall call2 = new AsyncCall(new AsyncMethod(Test2), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
 
-            //AsyncCall call5 = new AsyncCall(new AsyncMethod(Test5), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
-            //AsyncCall call6 = new AsyncCall(new AsyncMethod(Test6), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
+            AsyncCall call5 = new AsyncCall(new AsyncMethod(Test5), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
+            AsyncCall call6 = new AsyncCall(new AsyncMethod(Test6), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
             
             //AsyncCall call9 = new AsyncCall(new AsyncMethod(Test9), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
             //AsyncCall call10 = new AsyncCall(new AsyncMethod(Test10), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
@@ -104,42 +104,9 @@ namespace ZdCache.MasterCache
                     }
                 }
 
-                Console.WriteLine("set 100000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
-                Logger.WriteLog("set 100000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
-
-
-                size = 0;
-                ui = new UserInfo() { Name = "左丹test1_" };
-                data = Function.GetBytesFromSerializableObj(ui, ConstParams.BufferBlockSize, ref size);
-
-                failCount = 0;
-                sp.Restart();
-                while (true)
-                {
-                    try
-                    {
-                        ui.Name = "左丹test1_" + --i;
-                        ICacheDataType key = new CacheSerializableObject(ui.Name, ui, data, size);
-
-                        ICacheDataType cached = master.Get(key);
-
-                        if (cached == null)
-                            failCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failCount++;
-                    }
-
-                    if (i <= 1)
-                    {
-                        sp.Stop();
-                        break;
-                    }
-                }
-
-                Console.WriteLine("get 100000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
-                Logger.WriteLog("get 100000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
+                Console.WriteLine("左丹test1_  set 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
+                Logger.WriteLog("左丹test1_  set 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
+                
             }
             catch (Exception ex)
             {
@@ -151,83 +118,144 @@ namespace ZdCache.MasterCache
         static long i2 = 1;
         static void Test2(AsyncArgs arg)
         {
+            SleepHelper.Sleep(10000);
+
             Master master = arg.Args as Master;
             Random rd = new Random();
+            long failCount = 0;
+
+            Stopwatch sp = new Stopwatch();
+            sp.Start();
+
             while (true)
             {
                 try
                 {
                     CarInfo ui = new CarInfo() { CarName = "Car_test2_" + i2++, CarBrand = "奔驰，宝马", InfoSek = new byte[rd.Next(200, 9058)] };
                     ICacheDataType cache = new CacheSerializableObject(1, ui.CarName, ui);
-                    master.Set(cache);
+                    if (!master.Set(cache))
+                        failCount++;
                 }
                 catch (Exception ex)
                 {
-                    Logger.WriteLog("set CarInfo time out");
+                    failCount++;
                 }
 
-                SleepHelper.Sleep(1);
+                if (i2 > 10000)
+                {
+                    sp.Stop();
+                    break;
+                }
             }
+
+            Console.WriteLine("Car_test2_  set 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
+            Logger.WriteLog("Car_test2_  set 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
         }
         
         //get in category 0
         static void Test5(AsyncArgs arg)
         {
+            SleepHelper.Sleep(10000);
+
             Master master = arg.Args as Master;
             Random rd = new Random();
-            while (true)
+
+            long size = 0;
+            UserInfo ui = new UserInfo() { Name = "左丹test1_" };
+            List<byte[]> data = Function.GetBytesFromSerializableObj(ui, ConstParams.BufferBlockSize, ref size);
+
+            Stopwatch sp = new Stopwatch();
+            sp.Start();
+            long failCount = 0;
+
+            int roundTime = 0;
+
+            while (roundTime++ <= 10000)
             {
                 try
                 {
-                    UserInfo ui = new UserInfo() { Name = "左丹test1_" + rd.Next(1, (int)i) };
-                    ICacheDataType key = new CacheSerializableObject(ui.Name, ui);
+                    ui.Name = "左丹test1_" + rd.Next(1, (int)i);
+                    ICacheDataType key = new CacheSerializableObject(ui.Name, ui, data, size);
 
                     ICacheDataType cached = master.Get(key);
 
                     if (cached != null)
                         Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  Prov: {2}", key.Category, ui.Name, (cached.RealObj as UserInfo).Prov));
                     else
+                    {
+                        failCount++;
                         Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  failed************", key.Category, ui.Name));
+                    }
+
+                    master.GetAsync(key).Then((SuccessInMaster)((obj) => { Logger.WriteLog("success 1"); }), (FailInMaster)((err) => { Logger.WriteLog("failed____________ 1"); failCount++; }))
+                            .Then((SuccessInMaster)((obj) => { Logger.WriteLog("success 2"); }));
                 }
                 catch (Exception ex)
                 {
-                    Logger.WriteLog("get_category0", "error in get userInfo:" + ex.Message); 
+                    Logger.WriteLog("get_category0", "error in get userInfo:" + ex.Message);
+                    failCount++;
                 }
-                SleepHelper.Sleep(1000);
             }
+
+            sp.Stop();
+
+            Console.WriteLine("左丹test1_  get 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
+            Logger.WriteLog("左丹test1_  get 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
         }
 
         //get in category 1
         static void Test6(AsyncArgs arg)
         {
+            SleepHelper.Sleep(10000);
+
             Master master = arg.Args as Master;
             Random rd = new Random();
-            while (true)
+
+            long size = 0;
+            CarInfo ui = new CarInfo() { CarName = "左丹Car_test2_" };
+            List<byte[]> data = Function.GetBytesFromSerializableObj(ui, ConstParams.BufferBlockSize, ref size);
+
+            Stopwatch sp = new Stopwatch();
+            sp.Start();
+            long failCount = 0;
+
+            int roundTime = 0;
+
+            while (roundTime++ <= 10000)
             {
                 try
                 {
-                    CarInfo ui = new CarInfo() { CarName = "Car_test2_" + rd.Next(1, (int)i2) };
-                    ICacheDataType key = new CacheSerializableObject(1, ui.CarName, ui);
+                    ui.CarName = "Car_test2_" + rd.Next(1, (int)i2);
+                    ICacheDataType key = new CacheSerializableObject(1, ui.CarName, ui, data, size);
 
                     ICacheDataType cached = master.Get(key);
 
                     if (cached != null)
                         Logger.WriteLog("get_category1", string.Format("get CarInfo: category {0}  key: {1}  book length: {2} &&&&&&&&&&&", key.Category, ui.CarName, (cached.RealObj as CarInfo).InfoSek.Length));
                     else
+                    {
+                        failCount++;
                         Logger.WriteLog("get_category1", string.Format("get CarInfo: category {0}  key: {1}  failed ^^^^^^^^^^^^^^^", key.Category, ui.CarName));
+                    }
                 }
                 catch (Exception ex)
                 {
+                    failCount++;
                     Logger.WriteLog("get_category1", "error in get CarInfo:" + ex.Message);
                 }
-
-                SleepHelper.Sleep(1500);
             }
+
+            sp.Stop();
+
+            Console.WriteLine("Car_test2_  get 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
+            Logger.WriteLog("Car_test2_  get 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
         }
 
         //delete
         static void Test9(AsyncArgs arg)
         {
+            SleepHelper.Sleep(10000);
+
             Master master = arg.Args as Master;
             Random rd = new Random();
             while (true)
@@ -254,6 +282,8 @@ namespace ZdCache.MasterCache
         //update
         static void Test10(AsyncArgs arg)
         {
+            SleepHelper.Sleep(10000);
+
             Master master = arg.Args as Master;
             Random rd = new Random();
             while (true)

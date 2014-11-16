@@ -33,8 +33,6 @@ namespace ZdCache.PorterBase
             //只允许初始化一次
             lock (lockObj)
             {
-                Close();
-
                 if (this.porter == null)
                 {
                     //设置接收事件

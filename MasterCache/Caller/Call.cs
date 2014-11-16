@@ -19,7 +19,7 @@ namespace ZdCache.MasterCache.Caller
         /// <summary>
         /// 标志每个Call，唯一
         /// </summary>
-        protected Guid callID;
+        protected Guid callID = Guid.NewGuid();
 
         private MREContext callContext = new MREContext();
 
@@ -37,11 +37,6 @@ namespace ZdCache.MasterCache.Caller
         /// 已经返回的 call 数量。如果 allCallCount 不为 -1，且 allCallCount = returnedCallCount ，则认为处理完成
         /// </summary>
         protected int returnedCallCount = 0;
-
-        public Call()
-        {
-            this.callID = Guid.NewGuid();
-        }
 
         /// <summary>
         /// 处理 call
@@ -94,12 +89,6 @@ namespace ZdCache.MasterCache.Caller
         }
 
         /// <summary>
-        /// 判断在 Processing 过程中是否退出(默认返回 false)。
-        /// 比如 get 操作且返回唯一值，则当收到一个结果后，即可停止剩余的所有 process
-        /// </summary>
-        public virtual bool BreakWhenProcessing { get { return false; } }
-
-        /// <summary>
         /// 停止查找
         /// </summary>
         public void Stop()
@@ -112,5 +101,16 @@ namespace ZdCache.MasterCache.Caller
 
             this.processedList.Clear();
         }
+
+        /// <summary>
+        /// 判断在 Processing 过程中是否退出(默认返回 false)。
+        /// 比如 get 操作且返回唯一值，则当收到一个结果后，即可停止剩余的所有 process
+        /// </summary>
+        public virtual bool BreakWhenProcessing { get { return false; } }
+
+        /// <summary>
+        /// call 的唯一标识
+        /// </summary>
+        public Guid ID { get { return this.callID; } }
     }
 }
