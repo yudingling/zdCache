@@ -177,23 +177,39 @@ namespace ZdCache.MasterCache
                     ui.Name = "左丹test1_" + rd.Next(1, (int)i);
                     ICacheDataType key = new CacheSerializableObject(ui.Name, ui, data, size);
 
-                    ICacheDataType cached = master.Get(key);
+                    //ICacheDataType cached = master.Get(key);
 
-                    if (cached != null)
-                        Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  Prov: {2}", key.Category, ui.Name, (cached.RealObj as UserInfo).Prov));
-                    else
+                    //if (cached != null)
+                    //    Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  Prov: {2}", key.Category, ui.Name, (cached.RealObj as UserInfo).Prov));
+                    //else
+                    //{
+                    //    failCount++;
+                    //    Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  failed************", key.Category, ui.Name));
+                    //}
+
+                    master.GetAsync(key).Then((SuccessInMaster)((obj) =>
                     {
-                        failCount++;
-                        Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  failed************", key.Category, ui.Name));
-                    }
+                        UserInfo temp = obj[0].RealObj as UserInfo;
 
-                    master.GetAsync(key).Then((SuccessInMaster)((obj) => { Logger.WriteLog("success 1"); }), (FailInMaster)((err) => { Logger.WriteLog("failed____________ 1"); failCount++; }))
-                            .Then((SuccessInMaster)((obj) => { Logger.WriteLog("success 2"); }));
+                        if (obj != null)
+                            Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  Prov: {2}", key.Category, temp.Name, temp.Prov));
+                        else
+                        {
+                            failCount++;
+                            Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  failed************", key.Category, ui.Name));
+                        }
+                    }), (FailInMaster)((err) =>
+                    {
+                        Logger.WriteLog("get_category0", "error in get userInfo:" + err.Message);
+                        failCount++;
+                    })).Then((SuccessInMaster)((obj) =>
+                    {
+                        Logger.WriteLog("success 2");
+                    }));
                 }
                 catch (Exception ex)
                 {
-                    Logger.WriteLog("get_category0", "error in get userInfo:" + ex.Message);
-                    failCount++;
+                    Logger.WriteLog("fuck");
                 }
             }
 

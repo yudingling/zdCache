@@ -22,9 +22,13 @@ namespace ZdCache.MasterCache
         private Binding myBinding;
         private BalanceHandler balancer;
 
+        /// <summary>
+        /// deffered callback 类型
+        /// </summary>
         private Type successType = typeof(SuccessInMaster), failType = typeof(FailInMaster);
 
         public Master(int port, int recvAndSendTimeout)
+            : base(ConstParams.CallTimeOut)
         {
             this.masterName = string.Format("_master[port_{0}]_", port);
 
@@ -71,13 +75,13 @@ namespace ZdCache.MasterCache
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public List<ICacheDataType> GetList(ICacheDataType key)
+        public IList<ICacheDataType> GetList(ICacheDataType key)
         {
             if (key == null)
                 throw new Exception("param 'key' can not be null");
 
             CallGet cf = new CallGet();
-            List<ICacheDataType> retList;
+            IList<ICacheDataType> retList;
 
             cf.Process(this.myBinding.Slaves, key, out retList);
 
@@ -94,8 +98,8 @@ namespace ZdCache.MasterCache
             if (key == null)
                 throw new Exception("param 'key' can not be null");
 
-            CallGet cf = new CallGet(true);
-            List<ICacheDataType> retList;
+            CallGet cf = new CallGet(true, null);
+            IList<ICacheDataType> retList;
 
             cf.Process(this.myBinding.Slaves, key, out retList);
             if (retList != null && retList.Count > 0)
@@ -114,12 +118,13 @@ namespace ZdCache.MasterCache
             if (key == null)
                 throw new Exception("param 'key' can not be null");
 
-            CallGet cf = new CallGet(true);
-            List<ICacheDataType> retList;
+            CallGet cf = new CallGet(true, new FinishedDelegate(this.DefferedCallBack));
 
-            cf.Process(this.myBinding.Slaves, key, out retList);
+            //注意，必须先 CreatePromise 再执行 cf.Process，避免因 cf.Process 回调已经产生，而 promise 确没有创建的情况。 
+            Promise promise = this.CreatePromise(cf.ID, this.successType, this.failType);
+            cf.Process(this.myBinding.Slaves, key);
 
-            return this.CreatePromise(cf.ID, this.successType, this.failType);
+            return promise;
         }
 
         /// <summary>
@@ -133,7 +138,7 @@ namespace ZdCache.MasterCache
                 throw new Exception("param 'value' can not be null");
 
             CallSet cs = new CallSet(this.balancer);
-            List<ICacheDataType> retList;
+            IList<ICacheDataType> retList;
 
             return cs.Process(this.myBinding.Slaves, value, out retList);
         }
@@ -149,7 +154,7 @@ namespace ZdCache.MasterCache
                 throw new Exception("param 'value' can not be null");
 
             CallUpdate cu = new CallUpdate();
-            List<ICacheDataType> retList;
+            IList<ICacheDataType> retList;
 
             return cu.Process(this.myBinding.Slaves, value, out retList);
         }
@@ -165,11 +170,34 @@ namespace ZdCache.MasterCache
                 throw new Exception("param 'value' can not be null");
 
             CallDelete cd = new CallDelete();
-            List<ICacheDataType> retList;
+            IList<ICacheDataType> retList;
 
             return cd.Process(this.myBinding.Slaves, value, out retList);
         }
 
         #endregion
+
+        /// <summary>
+        /// deffered 超时
+        /// </summary>
+        /// <param name="callID"></param>
+        protected override void DefferedTimeOut(Guid callID)
+        {
+            this.Emit(callID, this.failType, new TimeoutException());
+        }
+
+        /// <summary>
+        /// call 的最终回调
+        /// </summary>
+        /// <param name="callID"></param>
+        /// <param name="success"></param>
+        /// <param name="obj">具体的参数，success 为 true 时为 ICollection<ICacheDataType>， false 时为 exception 的实例</param>
+        private void DefferedCallBack(Guid callID, bool success, object obj)
+        {
+            if (success)
+                this.Emit(callID, this.successType, obj);
+            else
+                this.Emit(callID, this.failType, obj);
+        }
     }
 }
