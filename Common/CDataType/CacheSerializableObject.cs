@@ -69,6 +69,18 @@ namespace ZdCache.Common.CDataType
         }
 
         /// <summary>
+        /// 构造方法  
+        /// todo. remove in further
+        /// </summary>
+        public CacheSerializableObject(byte categoryId, string identify, object serialzableObj, List<byte[]> serializedData, long size)
+            : base(categoryId, identify)
+        {
+            this.obj = serialzableObj;
+            this.data = serializedData;
+            this.totalSize = size;
+        }
+
+        /// <summary>
         /// 构造方法， 用于从socket 数据构造 CacheData
         /// </summary>
         /// <param name="categoryId"></param>

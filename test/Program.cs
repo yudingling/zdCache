@@ -3,6 +3,8 @@ using System.Threading;
 using System.Runtime.Remoting.Contexts;
 using ZdCache.Common;
 using System.Reflection;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace test
 {
@@ -23,9 +25,27 @@ namespace test
 
         public static void Main()
         {
+            ConcurrentDictionary<int, int> dic = new ConcurrentDictionary<int, int>();
+            dic.TryAdd(1, 2);
+            dic.TryAdd(2, 3);
+            dic.TryAdd(3, 4);
+            dic.TryAdd(34, 4);
+            dic.TryAdd(31, 4);
+            int outTmp;
+
+            Parallel.ForEach<int>(dic.Keys, item =>
+            {
+                if (dic.TryRemove(item, out outTmp))
+                    Console.WriteLine(item);
+            });
+
+            Console.ReadLine();
+            return;
+
             //CallB b = delegate(int a) { Console.WriteLine(a); };
             //CallB b = (int a) => { Console.WriteLine(a); };
-            Call(new CallA(done1), (CallB)((int a)=>{ Console.WriteLine(a); }));
+            string str = "fuck you";
+            Call(new CallA(done1), (CallB)((int a) => { Console.WriteLine(a); Console.WriteLine(str); }));
 
             Console.ReadLine();
         }

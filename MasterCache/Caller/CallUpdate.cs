@@ -18,7 +18,14 @@ namespace ZdCache.MasterCache.Caller
     {
         protected bool isSuccess = false;
 
-        public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out List<ICacheDataType> retList)
+        #region 构造函数
+
+        public CallUpdate() { }
+        public CallUpdate(bool sync, FinishedDelegate finished) : base(sync, finished) { }
+
+        #endregion
+
+        public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out IList<ICacheDataType> retList)
         {
             retList = null;
             if (slaveList == null || slaveList.Count == 0)
@@ -26,13 +33,7 @@ namespace ZdCache.MasterCache.Caller
 
             this.DoBeforeProcess();
             this.allCallCount = CallProcessor.Process(slaveList, this.processedList, new MasterCallArgsModel(this.callID, ActionKind.Update, args, UpdateCallReturn), this);
-            bool isTimeOut = this.DoAfterProcess(ConstParams.CallTimeOut);
-
-            //结束 action
-            Stop();
-
-            //action 超时，则抛出异常
-            if (isTimeOut)
+            if (this.DoAfterProcess(ConstParams.CallTimeOut))
                 throw new Exception("update timeout!");
 
             return this.isSuccess;

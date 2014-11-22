@@ -55,6 +55,8 @@
     <Compile Include="Binding.cs" />
     <Compile Include="Caller\MREContext.cs" />
     <Compile Include="CallProcessor.cs" />
+    <Compile Include="Caller\FinishedDelegate.cs" />
+    <Compile Include="DefferedDelegateOfMaster.cs" />
     <Compile Include="LoadbalanceStrategy\DefaultLoadBalanceStrategy.cs" />
     <Compile Include="LoadbalanceStrategy\ILoadBalanceStrategy.cs" />
     <Compile Include="MasterCallArgsModel.cs" />

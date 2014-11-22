@@ -36,12 +36,15 @@ namespace ZdCache.MasterCache.Caller
             {
                 //如果call 已全部 return，则 set
                 if (allCallCount == returnedCallCount)
+                {
                     this.manualRE.Set();
+                    return true;
+                }
             }
             catch
             {
             }
-            return true;
+            return false;
         }
 
         private bool WaitOne(int allCallCount, int returnedCallCount, int millisecondsTimeout)

@@ -21,23 +21,32 @@ namespace ZdCache.MasterCache.Caller
         //存储所有 slave 的返回值
         private List<ICacheDataType> allCallRets = new List<ICacheDataType>();
 
+        #region 构造函数
+
         public CallGet()
             : base()
         {
         }
 
-        public CallGet(bool retUnique)
-            : base()
+        public CallGet(bool sync, FinishedDelegate finished)
+            : base(sync, finished)
+        {
+        }
+
+        public CallGet(bool sync, bool retUnique, FinishedDelegate finished)
+            : base(sync, finished)
         {
             this.isRetUnique = retUnique;
         }
 
+        #endregion
+
         /// <summary>
-        /// 执行查找。 Process 方法对外是阻塞调用的
+        /// 执行查找。 阻塞
         /// </summary>
-        public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out List<ICacheDataType> retList)
+        public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out IList<ICacheDataType> retList)
         {
-            if (slaveList == null || slaveList.Count == 0)
+            if (!this.ProcessEnabled || slaveList == null || slaveList.Count == 0)
             {
                 retList = null;
                 return false;
@@ -45,18 +54,28 @@ namespace ZdCache.MasterCache.Caller
 
             this.DoBeforeProcess();
             this.allCallCount = CallProcessor.Process(slaveList, this.processedList, new MasterCallArgsModel(this.callID, ActionKind.Get, args, FindCallReturn), this);
-            bool isTimeOut = this.DoAfterProcess(ConstParams.CallTimeOut);
-
-            //结束 action
-            Stop();
-
-            //action 超时，则抛出异常
-            if (isTimeOut)
+            if (this.DoAfterProcess(ConstParams.CallTimeOut))
                 throw new Exception("find timeout!");
 
             retList = this.allCallRets;
 
             return this.allCallRets.Count > 0;
+        }
+
+        /// <summary>
+        /// 执行查找。非阻塞
+        /// </summary>
+        public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args)
+        {
+            if (!this.ProcessEnabled || slaveList == null || slaveList.Count == 0)
+                return false;
+
+            this.DoBeforeProcess();
+            this.allCallCount = CallProcessor.Process(slaveList, this.processedList, new MasterCallArgsModel(this.callID, ActionKind.Get, args, FindCallReturn), this);
+            this.DoAfterProcess(0);
+
+            //存在执行的 call 则返回 true
+            return this.allCallCount > 0;
         }
 
         private void FindCallReturn(ReturnArgsModel returnArgsModel)
@@ -71,6 +90,17 @@ namespace ZdCache.MasterCache.Caller
                 }
 
                 this.DoReturnProcess();
+            }
+        }
+
+        protected override void CallFinished()
+        {
+            if (this.finishCallBack != null)
+            {
+                if (this.allCallRets.Count > 0)
+                    this.finishCallBack(this.ID, true, this.allCallRets);
+                else
+                    this.finishCallBack(this.ID, false, new Exception("获取数据失败！"));
             }
         }
 

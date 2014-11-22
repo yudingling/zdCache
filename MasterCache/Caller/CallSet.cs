@@ -24,12 +24,22 @@ namespace ZdCache.MasterCache.Caller
         //执行 set 的slaveModel
         private SlaveModel slaveForSet;
 
+        #region 构造函数
+
         public CallSet(BalanceHandler balancer)
         {
             this.myBalancer = balancer;
         }
 
-        public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out List<ICacheDataType> retList)
+        public CallSet(bool sync, FinishedDelegate finished, BalanceHandler balancer)
+            : base(sync, finished)
+        {
+            this.myBalancer = balancer;
+        }
+
+        #endregion
+
+        public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out IList<ICacheDataType> retList)
         {
             retList = null;
             if (slaveList == null || slaveList.Count == 0)
@@ -62,9 +72,6 @@ namespace ZdCache.MasterCache.Caller
                 this.DoBeforeProcess();
                 this.allCallCount = CallProcessor.Process(slaveList, slaveForSet, this.processedList, masterCallArgForSet, masterCallArgForDel, this);
                 bool isTimeOut = this.DoAfterProcess(timeOutMS);
-
-                //结束 action
-                Stop();
 
                 //action 超时(单个调用超时以及整体超时)，则抛出异常
                 if (isTimeOut || sp.ElapsedMilliseconds > ConstParams.CallTimeOut)
