@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 
 namespace ZdCache.Common.DefferCallBack
 {
-    public class Deffered
+    public class Deffered : IDisposable
     {
         private class TimeOutCheckItem
         {
             public Guid ID { get; set; }
             public DateTime TM { get; set; }
         }
+
+        private AsyncCall call;
 
         private ConcurrentDictionary<Guid, TimeOutCheckItem> timeOutCheckDic = new ConcurrentDictionary<Guid, TimeOutCheckItem>();
         private ConcurrentDictionary<Guid, Promise> promiseDic = new ConcurrentDictionary<Guid, Promise>();
@@ -24,7 +26,7 @@ namespace ZdCache.Common.DefferCallBack
         /// <param name="timeOut"></param>
         public Deffered(int timeOut)
         {
-            AsyncCall call = new AsyncCall(new AsyncMethod(DefferedTimeOutCheck), new AsyncArgs() { Args = timeOut }, true, null);
+            this.call = new AsyncCall(new AsyncMethod(DefferedTimeOutCheck), new AsyncArgs() { Args = timeOut }, true, null);
         }
 
         /// <summary>
@@ -117,5 +119,18 @@ namespace ZdCache.Common.DefferCallBack
         /// </summary>
         /// <param name="callID"></param>
         protected virtual void DefferedTimeOut(Guid callID) { }
+
+        #region IDisposable 成员
+
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        public virtual void Dispose()
+        {
+            if (this.call != null)
+                this.call.Stop();
+        }
+
+        #endregion
     }
 }

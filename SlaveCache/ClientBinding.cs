@@ -30,14 +30,23 @@ namespace ZdCache.SlaveCache
             DataFromBinding dataFromBinding, SendErrorFromBinding sendErrorFromBinding)
             : base()
         {
-            this.id = bindingId;
+            try
+            {
+                this.id = bindingId;
 
-            this.onData = dataFromBinding;
-            this.onSendError = sendErrorFromBinding;
+                this.onData = dataFromBinding;
+                this.onSendError = sendErrorFromBinding;
 
-            this.packageContainer = new PackageDataContainer();
+                this.packageContainer = new PackageDataContainer();
 
-            this.InitPorter(setting, new ErrorTracer(this.PBLogError));
+                this.InitPorter(setting, new ErrorTracer(this.PBLogError));
+            }
+            catch
+            {
+                //存在有限资源的分配(packageContainer 中的线程)，如果异常，需要释放资源
+                this.Close();
+                throw;
+            }
         }
 
         protected override void DataReceived(List<byte[]> data)

@@ -8,7 +8,7 @@ using ZdCache.MasterCache.LoadbalanceStrategy;
 
 namespace ZdCache.MasterCache
 {
-    public class BalanceHandler
+    public class BalanceHandler : IDisposable
     {
         private SlaveModel[] sortedModeList;
 
@@ -16,6 +16,7 @@ namespace ZdCache.MasterCache
 
         private Binding binding;
         private ILoadBalanceStrategy balanceStrategy;
+        private AsyncCall call;
 
         //排序命令池
         private ConcurrentStack<byte> cmds = new ConcurrentStack<byte>();
@@ -30,7 +31,7 @@ namespace ZdCache.MasterCache
             this.binding = myBinding;
             this.balanceStrategy = strategy;
 
-            AsyncCall call = new AsyncCall(new AsyncMethod(DoneSort), null, true, null);
+            this.call = new AsyncCall(new AsyncMethod(DoneSort), null, true, null);
         }
 
         /// <summary>
@@ -112,5 +113,15 @@ namespace ZdCache.MasterCache
 
             return null;
         }
+
+        #region IDisposable 成员
+
+        public void Dispose()
+        {
+            if (this.call != null)
+                this.call.Stop();
+        }
+
+        #endregion
     }
 }

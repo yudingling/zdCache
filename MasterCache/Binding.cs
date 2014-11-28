@@ -24,6 +24,7 @@ namespace ZdCache.MasterCache
         private ConcurrentDictionary<Guid, int> slaveRegisterDic = new ConcurrentDictionary<Guid, int>();
 
         private PackageDataContainer packageContainer;
+        private AsyncCall statusCheckCall;
 
         /// <summary>
         /// 构造函数
@@ -31,9 +32,18 @@ namespace ZdCache.MasterCache
         public Binding(BaseSettings setting, ErrorTracer tracer)
             : base(setting, tracer)
         {
-            this.packageContainer = new PackageDataContainer();
+            try
+            {
+                this.packageContainer = new PackageDataContainer();
 
-            AsyncCall statusCheckCall = new AsyncCall(new AsyncMethod(StatusCheckCall), null, true, null);
+                this.statusCheckCall = new AsyncCall(new AsyncMethod(StatusCheckCall), null, true, null);
+            }
+            catch
+            {
+                //存在有限资源的分配，如果异常，需要释放资源
+                this.Close();
+                throw;
+            }
         }
 
         /// <summary>
@@ -102,10 +112,16 @@ namespace ZdCache.MasterCache
             }
         }
 
+        /// <summary>
+        /// 释放资源
+        /// </summary>
         public override void Close()
         {
             if (this.packageContainer != null)
                 this.packageContainer.Dispose();
+
+            if (this.statusCheckCall != null)
+                this.statusCheckCall.Stop();
 
             base.Close();
         }

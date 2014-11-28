@@ -219,10 +219,17 @@ namespace ZdCache.SlaveCache
 
         #region IDisposable 成员
 
+        /// <summary>
+        /// 释放资源
+        /// </summary>
         public void Dispose()
         {
             //释放本地化操作池
-            this.localActionPool.Dispose();
+            if (this.localActionPool != null)
+                this.localActionPool.Dispose();
+
+            if (this.hitter != null)
+                this.hitter.Dispose();
         }
 
         #endregion
