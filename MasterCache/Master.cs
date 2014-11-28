@@ -30,22 +30,31 @@ namespace ZdCache.MasterCache
         public Master(int port, int recvAndSendTimeout)
             : base(ConstParams.CallTimeOut)
         {
-            this.masterName = string.Format("_master[port_{0}]_", port);
+            try
+            {
+                this.masterName = string.Format("_master[port_{0}]_", port);
 
-            SocketServerSettings setting = new SocketServerSettings(
-                port,
-                System.Net.Sockets.ProtocolType.Tcp,
-                recvAndSendTimeout,
-                new DefaultSizeGetter(),
-                4);
+                SocketServerSettings setting = new SocketServerSettings(
+                    port,
+                    System.Net.Sockets.ProtocolType.Tcp,
+                    recvAndSendTimeout,
+                    new DefaultSizeGetter(),
+                    4);
 
-            this.myBinding = new Binding(setting, new PorterBase.ErrorTracer(PBLogError));
+                this.myBinding = new Binding(setting, new PorterBase.ErrorTracer(PBLogError));
 
-            //使用默认的负载平衡策略
-            this.balancer = new BalanceHandler(this.myBinding, new DefaultLoadBalanceStrategy());
+                //使用默认的负载平衡策略
+                this.balancer = new BalanceHandler(this.myBinding, new DefaultLoadBalanceStrategy());
 
-            Logger.WriteLog(LogMsgType.Info, this.masterName,
-                string.Format("master 初始化成功[成功绑定到端口：{0}]！", port));
+                Logger.WriteLog(LogMsgType.Info, this.masterName,
+                    string.Format("master 初始化成功[成功绑定到端口：{0}]！", port));
+            }
+            catch
+            {
+                //存在有限资源的分配（base 中分配了线程），如果异常，需要释放资源
+                this.Dispose();
+                throw;
+            }
         }
 
         private void PBLogError(ErrorType errorType, int tokenID, string error)
@@ -198,6 +207,20 @@ namespace ZdCache.MasterCache
                 this.Emit(callID, this.successType, obj);
             else
                 this.Emit(callID, this.failType, obj);
+        }
+
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        public override void Dispose()
+        {
+            if (this.myBinding != null)
+                this.myBinding.Close();
+
+            if (this.balancer != null)
+                this.balancer.Dispose();
+
+            base.Dispose();
         }
     }
 }

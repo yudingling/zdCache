@@ -20,18 +20,27 @@ namespace ZdCache.PorterBase
         private SocketClientSettings clientSetting;
 
         //控制连接超时
-        private static ManualResetEvent timeOutObject = new ManualResetEvent(false); 
+        private static ManualResetEvent timeOutObject = new ManualResetEvent(false);
 
         public SocketClient(SocketClientSettings setting, ErrorTracer tracer)
             : base(setting, tracer)
         {
-            this.recvSAEA = CreateNewSAEAForRecvAndSend(TokenUseType.Receive);
-            //用于处理数据接收/发送是一个相对耗时的过程，所以并行存在的数量是比较多的，capacity 放大些
-            this.sendSAEAPool = new SAEAPool(1000);
+            try
+            {
+                this.recvSAEA = CreateNewSAEAForRecvAndSend(TokenUseType.Receive);
+                //用于处理数据接收/发送是一个相对耗时的过程，所以并行存在的数量是比较多的，capacity 放大些
+                this.sendSAEAPool = new SAEAPool(1000);
 
-            this.clientSetting = setting;
+                this.clientSetting = setting;
 
-            InitLocalSocket();
+                InitLocalSocket();
+            }
+            catch
+            {
+                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程），如果异常，需要释放资源
+                base.Close();
+                throw;
+            }
         }
 
         #region connect  async

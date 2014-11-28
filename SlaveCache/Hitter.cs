@@ -20,7 +20,7 @@ namespace ZdCache.SlaveCache
     /// <summary>
     /// 处理缓存命中、失效
     /// </summary>
-    internal class CacheHitter
+    internal class CacheHitter : IDisposable
     {
         #region innerClass，存储缓存最新的访问时间标识
 
@@ -43,6 +43,7 @@ namespace ZdCache.SlaveCache
         private ConcurrentDictionary<byte, ConcurrentStack<HitInfo>> myHitter = new ConcurrentDictionary<byte, ConcurrentStack<HitInfo>>();
 
         private ExpireCachedItems expireKiller;
+        private AsyncCall expireCall;
 
         /// <summary>
         /// 构造函数
@@ -56,7 +57,7 @@ namespace ZdCache.SlaveCache
 
             if (this.expireTM > 0)
             {
-                AsyncCall call = new AsyncCall(new AsyncMethod(ExpireAuto), null, true, null);
+                this.expireCall = new AsyncCall(new AsyncMethod(ExpireAuto), null, true, null);
             }
         }
 
@@ -227,5 +228,18 @@ namespace ZdCache.SlaveCache
         /// 缓存命中率
         /// </summary>
         public double HitRate { get { return Math.Round((double)this.hitCount / (double)this.actionCount, 2); } }
+
+        #region IDisposable 成员
+
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        public void Dispose()
+        {
+            if (this.expireCall != null)
+                this.expireCall.Stop();
+        }
+
+        #endregion
     }
 }

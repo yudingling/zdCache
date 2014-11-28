@@ -84,6 +84,9 @@ namespace ZdCache.SlaveCache.LocalAction
             this.running = false;
             while (this.pool.Count > 0)
                 SleepHelper.Sleep(100);
+
+            foreach (AsyncCall call in this.callList)
+                call.Stop();
         }
 
         #endregion

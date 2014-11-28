@@ -35,18 +35,27 @@ namespace ZdCache.PorterBase
         public TcpSocketServer(SocketServerSettings setting, ErrorTracer tracer)
             : base(setting, tracer)
         {
-            this.serverSetting = setting;
+            try
+            {
+                this.serverSetting = setting;
 
-            //因为只是用于接收socket的连接，并无其他耗时操作，所以并行数是很有限的，10 个足够了
-            this.acceptSAEAPool = new SAEAPool(10);
-            //用于处理数据接收/发送是一个相对耗时的过程，所以并行存在的数量是比较多的，capacity 放大些
-            this.recvSAEAPool = new SAEAPool(1000);
-            this.sendSAEAPool = new SAEAPool(1000);
-            //用于保存已经连接上客户端的 SAEA 对象
-            this.keepAccepttedSAEAList = new ConcurrentDictionary<int, SocketAsyncEventArgs>();
+                //因为只是用于接收socket的连接，并无其他耗时操作，所以并行数是很有限的，10 个足够了
+                this.acceptSAEAPool = new SAEAPool(10);
+                //用于处理数据接收/发送是一个相对耗时的过程，所以并行存在的数量是比较多的，capacity 放大些
+                this.recvSAEAPool = new SAEAPool(1000);
+                this.sendSAEAPool = new SAEAPool(1000);
+                //用于保存已经连接上客户端的 SAEA 对象
+                this.keepAccepttedSAEAList = new ConcurrentDictionary<int, SocketAsyncEventArgs>();
 
-            //开始侦听
-            InitLocalSocket();
+                //开始侦听
+                InitLocalSocket();
+            }
+            catch
+            {
+                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程），如果异常，需要释放资源
+                base.Close();
+                throw;
+            }
         }
 
         /// <summary>

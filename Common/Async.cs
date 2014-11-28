@@ -79,10 +79,13 @@ namespace ZdCache.Common
 
         public void Start()
         {
-            if (this.task == null)
+            lock (this.lockObj)
             {
-                this.task = SThreadPool.Pop();
-                this.task.Active(this.asArg, this.asMethod, this.abortExecuteMethod, Finished);
+                if (this.task == null)
+                {
+                    this.task = SThreadPool.Pop();
+                    this.task.Active(this.asArg, this.asMethod, this.abortExecuteMethod, Finished);
+                }
             }
         }
 

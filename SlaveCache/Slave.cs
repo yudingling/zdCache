@@ -56,8 +56,6 @@ namespace ZdCache.SlaveCache
             GenerateBinding(this.slaveCfg.Masters.Values, this.slaveCfg.RecvAndSendTimeout, this.slaveCfg.CallBackThreadCount);
         }
 
-
-
         /// <summary>
         /// 向服务端注册此 slave， 实际上是发送一个 statusInfo
         /// </summary>

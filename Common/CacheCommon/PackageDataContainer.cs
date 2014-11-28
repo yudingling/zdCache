@@ -114,6 +114,9 @@ namespace ZdCache.Common.CacheCommon
 
         #region IDisposable 成员
 
+        /// <summary>
+        /// 释放资源
+        /// </summary>
         public void Dispose()
         {
             if (this.clearUnsedPackageCall != null)
