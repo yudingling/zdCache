@@ -36,7 +36,16 @@ namespace ZdCache.Common.DefferCallBack
         }
 
         /// <summary>
-        /// 挂载延迟回调方法，支持链式调用
+        /// 挂载延迟回调方法，支持链式调用。
+        /// 
+        ///    todo.此处有个问题没有解决， 即如何保证所有的 then 设置的回调全部被触发。
+        ///         存在这种情形:  promiseA.then(...); threadSleep(100); promiseA.then(...);
+        ///                       在这种情况下，Emit 方法不能决定何时停止 while 循环， 因为你没办法知道 then 何时不再被调用。
+        ///    
+        ///            1、一旦阻塞了 Emit 的返回，将阻塞 PorterBase 的回调结束，如果你的回调线程设置为4个，PorterBase 的回调就阻塞在这4个回调上；
+        ///            2、只要不存在上面的伪代码中的情形，一般不会被漏，因为 then 的链式调用执行很快，比 Emit 的触发肯定是要先，但不能排除 sb 写法；
+        ///      
+        ///    脑袋瘦了一圈，没有想到了更好的解决方式...... 求大神
         /// </summary>
         /// <param name="callBacks"></param>
         public Promise Then(params Delegate[] callBacks)
@@ -45,19 +54,14 @@ namespace ZdCache.Common.DefferCallBack
             {
                 if (callBacks != null && callBacks.Length > 0)
                 {
-                    try
+                    ConcurrentQueue<Delegate> queue;
+                    foreach (Delegate curDelegate in callBacks)
                     {
-                        ConcurrentQueue<Delegate> queue;
-                        foreach (Delegate curDelegate in callBacks)
+                        if (curDelegate != null)
                         {
                             if (this.callBackDic.TryGetValue(curDelegate.GetType(), out queue))
-                            {
                                 queue.Enqueue(curDelegate);
-                            }
                         }
-                    }
-                    catch
-                    {
                     }
                 }
 
@@ -77,9 +81,9 @@ namespace ZdCache.Common.DefferCallBack
             if (this.callBackDic.TryGetValue(callBackType, out queue))
             {
                 Delegate curDelegate;
-                //回调触发后，一次循环中最多等待 1s 供 then 方法去增加回调。
-                //此处这么做是考虑到如果主体完成非常快，导致 then 的链式调用还没全部完成，Emit 就执行了，则需要尽量保证所有的回调执行到
-                while (this.semaphore.Wait(1000))
+                //回调触发后，最多等待 1s 供 then 方法去增加回调
+                int waitTime = 1000;
+                while (this.semaphore.Wait(waitTime))
                 {
                     while (queue.TryDequeue(out curDelegate))
                     {
@@ -91,6 +95,7 @@ namespace ZdCache.Common.DefferCallBack
                         {
                         }
                     }
+                    waitTime = 0;
                 }
             }
         }

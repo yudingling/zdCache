@@ -40,7 +40,7 @@ namespace ZdCache.MasterCache.Caller
         /// </summary>
         protected Guid callID = Guid.NewGuid();
 
-        private WaitingContext waitContext = new WaitingContext();
+        private WaitingContext waitContext;
 
         /// <summary>
         /// 存储此 call 对应的执行命令的 SlaveModel
@@ -67,7 +67,10 @@ namespace ZdCache.MasterCache.Caller
         /// <summary>
         /// 构造函数，默认为同步调用
         /// </summary>
-        public Call() { }
+        public Call()
+        {
+            this.waitContext = new WaitingContext(this.isSync);
+        }
 
         /// <summary>
         /// 构造函数
@@ -76,6 +79,8 @@ namespace ZdCache.MasterCache.Caller
         {
             this.isSync = sync;
             this.finishCallBack = finished;
+
+            this.waitContext = new WaitingContext(this.isSync);
         }
 
         /// <summary>
@@ -115,21 +120,16 @@ namespace ZdCache.MasterCache.Caller
         /// <summary>
         /// DoAfterProcess
         /// </summary>
+        /// <returns>返回是否超时</returns>
         protected bool DoAfterProcess(int callCount, int millisecondsTimeout)
         {
-            if (this.isSync)
-            {
-                //返回是否超时
-                if (this.waitContext.StartWaiting(callCount, millisecondsTimeout))
-                    return false;
-                else
-                {
-                    //如果超时，则直接调用 DoFinishProcess，否则交由 DoReturnProcess 进行判断是否调用 DoFinishProcess
-                    return this.DoFinishProcess();
-                }
-            }
-            else
+            if (this.waitContext.StartWaiting(callCount, millisecondsTimeout))
                 return false;
+            else
+            {
+                //如果超时，则直接调用 DoFinishProcess，否则交由 DoReturnProcess 进行判断是否调用 DoFinishProcess
+                return this.DoFinishProcess();
+            }
         }
 
         /// <summary>
@@ -160,14 +160,14 @@ namespace ZdCache.MasterCache.Caller
 
                     //清除 processedList
                     this.processedList.Clear();
-
-                    //释放 waitContext
-                    this.waitContext.Dispose();
-
-                    //如果是异步，则调用 CallFinished
-                    if (!this.isSync)
-                        this.CallFinished();
                 }
+
+                //释放 waitContext
+                this.waitContext.Dispose();
+
+                //如果是异步，则调用 CallFinished
+                if (!this.isSync)
+                    this.CallFinished();
 
                 return true;
             }
