@@ -40,10 +40,10 @@ namespace ZdCache.MasterCache
                 int.Parse(ConfigurationManager.AppSettings["RevcAndSendTimeout"].ToString().Trim()));
 
             AsyncCall call1 = new AsyncCall(new AsyncMethod(Test1), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
-            AsyncCall call2 = new AsyncCall(new AsyncMethod(Test2), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
+            //AsyncCall call2 = new AsyncCall(new AsyncMethod(Test2), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
 
             AsyncCall call5 = new AsyncCall(new AsyncMethod(Test5), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
-            AsyncCall call6 = new AsyncCall(new AsyncMethod(Test6), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
+            //AsyncCall call6 = new AsyncCall(new AsyncMethod(Test6), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
             
             //AsyncCall call9 = new AsyncCall(new AsyncMethod(Test9), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
             //AsyncCall call10 = new AsyncCall(new AsyncMethod(Test10), new AsyncArgs() { Args = master, ArgsAbort = null }, true, null);
@@ -79,7 +79,7 @@ namespace ZdCache.MasterCache
                 sp.Start();
 
                 long size = 0;
-                UserInfo ui = new UserInfo() { Name = "左丹test1_", age = 26, Prov = "This is a test of an object blah blah es, serialization does not seem to slow things down so much.  The gzip compression is " };
+                UserInfo ui = new UserInfo() { Name = "左丹test1_x", age = 26, Prov = "This is a test of an object blah blah es, serialization does not seem to slow things down so much.  The gzip compression is ", Data = new byte[rd.Next(200, 9058)] };
                 List<byte[]> data = Function.GetBytesFromSerializableObj(ui, ConstParams.BufferBlockSize, ref size);
 
 
@@ -106,7 +106,7 @@ namespace ZdCache.MasterCache
 
                 Console.WriteLine("左丹test1_  set 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
                 Logger.WriteLog("左丹test1_  set 10000 finished, failed:" + failCount + "  time(ms):" + sp.ElapsedMilliseconds);
-                
+
             }
             catch (Exception ex)
             {
@@ -127,12 +127,16 @@ namespace ZdCache.MasterCache
             Stopwatch sp = new Stopwatch();
             sp.Start();
 
+            long size = 0;
+            CarInfo ui = new CarInfo() { CarName = "Car_test2_", CarBrand = "奔驰，宝马", InfoSek = new byte[rd.Next(200, 9058)] };
+            List<byte[]> data = Function.GetBytesFromSerializableObj(ui, ConstParams.BufferBlockSize, ref size);
+
             while (true)
             {
                 try
                 {
-                    CarInfo ui = new CarInfo() { CarName = "Car_test2_" + i2++, CarBrand = "奔驰，宝马", InfoSek = new byte[rd.Next(200, 9058)] };
-                    ICacheDataType cache = new CacheSerializableObject(1, ui.CarName, ui);
+                    ui.CarName = "Car_test2_" + i2++;
+                    ICacheDataType cache = new CacheSerializableObject(1, ui.CarName, ui, data, size);
                     if (!master.Set(cache))
                         failCount++;
                 }
@@ -174,10 +178,16 @@ namespace ZdCache.MasterCache
             {
                 try
                 {
-                    ui.Name = "左丹test1_" + rd.Next(1, (int)i);
+                    if (i < 200)
+                    {
+                        roundTime--;
+                        continue;
+                    }
+
+                    ui.Name = "左丹test1_" + rd.Next(1, (int)(i-199));
                     ICacheDataType key = new CacheSerializableObject(ui.Name, ui, data, size);
 
-                    //ICacheDataType cached = master.Get(key);
+                    ICacheDataType cached = master.Get(key);
 
                     //if (cached != null)
                     //    Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  Prov: {2}", key.Category, ui.Name, (cached.RealObj as UserInfo).Prov));
@@ -190,13 +200,12 @@ namespace ZdCache.MasterCache
                     master.GetAsync(key).Then((SuccessInMaster)((obj) =>
                     {
                         UserInfo temp = obj[0].RealObj as UserInfo;
-
                         if (obj != null)
-                            Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  Prov: {2}", key.Category, temp.Name, temp.Prov));
+                            Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  DataLength: {2}", obj[0].Category, temp.Name, temp.Data.Length));
                         else
                         {
                             failCount++;
-                            Logger.WriteLog("get_category0", string.Format("get UserInfo: category {0}  key: {1}  failed************", key.Category, ui.Name));
+                            Logger.WriteLog("get_category0", "get UserInfo: failed************");
                         }
                     }), (FailInMaster)((err) =>
                     {
@@ -204,12 +213,12 @@ namespace ZdCache.MasterCache
                         failCount++;
                     })).Then((SuccessInMaster)((obj) =>
                     {
-                        Logger.WriteLog("success 2");
+                        Logger.WriteLog("xxxxx", "success 2");
                     }));
                 }
                 catch (Exception ex)
                 {
-                    Logger.WriteLog("fuck");
+                    Logger.WriteLog("fuck:" + ex.Message +  ex.StackTrace);
                 }
             }
 
@@ -228,7 +237,7 @@ namespace ZdCache.MasterCache
             Random rd = new Random();
 
             long size = 0;
-            CarInfo ui = new CarInfo() { CarName = "左丹Car_test2_" };
+            CarInfo ui = new CarInfo() { CarName = "Car_test2_" };
             List<byte[]> data = Function.GetBytesFromSerializableObj(ui, ConstParams.BufferBlockSize, ref size);
 
             Stopwatch sp = new Stopwatch();
@@ -239,9 +248,15 @@ namespace ZdCache.MasterCache
 
             while (roundTime++ <= 10000)
             {
+                if (i2 < 200)
+                {
+                    roundTime--;
+                    continue;
+                }
+
                 try
                 {
-                    ui.CarName = "Car_test2_" + rd.Next(1, (int)i2);
+                    ui.CarName = "Car_test2_" + rd.Next(1, (int)(i2-199));
                     ICacheDataType key = new CacheSerializableObject(1, ui.CarName, ui, data, size);
 
                     ICacheDataType cached = master.Get(key);
