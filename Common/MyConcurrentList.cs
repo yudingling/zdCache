@@ -10,7 +10,7 @@ namespace ZdCache.Common
     /// 简单自定义线程安全List
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class MyConcurrentList<T>
+    public class MyConcurrentList<T> : IDisposable
     {
         private ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
@@ -102,5 +102,14 @@ namespace ZdCache.Common
                 return list.Count;
             }
         }
+
+        #region IDisposable 成员
+
+        public void Dispose()
+        {
+            this.rwLock.Dispose();
+        }
+
+        #endregion
     }
 }

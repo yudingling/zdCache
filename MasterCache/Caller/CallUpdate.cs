@@ -28,12 +28,12 @@ namespace ZdCache.MasterCache.Caller
         public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out IList<ICacheDataType> retList)
         {
             retList = null;
-            if (slaveList == null || slaveList.Count == 0)
+            if (!this.ProcessEnabled || slaveList == null || slaveList.Count == 0)
                 return false;
 
             this.DoBeforeProcess();
             this.allCallCount = CallProcessor.Process(slaveList, this.processedList, new MasterCallArgsModel(this.callID, ActionKind.Update, args, UpdateCallReturn), this);
-            if (this.DoAfterProcess(ConstParams.CallTimeOut))
+            if (this.DoAfterProcess(this.allCallCount, ConstParams.CallTimeOut))
                 throw new Exception("update timeout!");
 
             return this.isSuccess;

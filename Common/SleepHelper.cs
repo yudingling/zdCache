@@ -13,9 +13,6 @@ namespace ZdCache.Common
     /// </summary>
     public class SleepHelper
     {
-        /// <summary>
-        /// 注意，此处必须要使用线程安全字典, 4.0 就是好，自带，哈哈
-        /// </summary>
         public static ConcurrentDictionary<Thread, ManualResetEvent> AllResetEvent = new ConcurrentDictionary<Thread, ManualResetEvent>();
 
         static SleepHelper()
@@ -35,8 +32,8 @@ namespace ZdCache.Common
             {
                 foreach (Thread thread in AllResetEvent.Keys)
                 {
-                    if (!thread.IsAlive)
-                        AllResetEvent.TryRemove(thread, out outValue);
+                    if (!thread.IsAlive && AllResetEvent.TryRemove(thread, out outValue))
+                        outValue.Dispose();
                 }
                 //
                 resetEventS.Reset();

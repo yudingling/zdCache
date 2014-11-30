@@ -37,6 +37,7 @@ namespace ZdCache.Common.DefferCallBack
         {
             int timeOut = (int)arg.Args;
             TimeOutCheckItem itemTmp = null;
+            Promise promiseTmp = null;
             while (true)
             {
                 try
@@ -45,9 +46,12 @@ namespace ZdCache.Common.DefferCallBack
                     {
                         if (((TimeSpan)(DateTime.Now - item.TM)).TotalMilliseconds >= timeOut)
                         {
-                            //比如从过期列表中成功移除才能触发 timeOut 事件
-                            if (this.timeOutCheckDic.TryRemove(item.ID, out itemTmp))
+                            //注意此处的判断顺序，先 timeOutCheckDic、再 promiseDic， 后续的回调触发中也应该是这个顺序
+                            if (this.timeOutCheckDic.TryRemove(item.ID, out itemTmp)
+                                && this.promiseDic.TryRemove(item.ID, out promiseTmp))
                             {
+                                promiseTmp.Dispose();
+
                                 //PromiseTimeOut 的异常忽略掉
                                 try
                                 {
@@ -105,12 +109,12 @@ namespace ZdCache.Common.DefferCallBack
             TimeOutCheckItem item = null;
             Promise promise = null;
 
-            //执行并删除对应的 promise
-            if (this.promiseDic.TryRemove(callID, out promise))
+            //注意此处的判断顺序，和timeout 中的判断顺序必须一致
+            if (this.timeOutCheckDic.TryRemove(callID, out item)
+                && this.promiseDic.TryRemove(callID, out promise))
             {
-                //从过期列表中移除，注意，必须是从过期列表中移除成功了才能触发 Emit
-                if (this.timeOutCheckDic.TryRemove(callID, out item))
-                    promise.Emit(callBackType, args);
+                promise.Emit(callBackType, args);
+                promise.Dispose();
             }
         }
 

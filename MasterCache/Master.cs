@@ -127,7 +127,7 @@ namespace ZdCache.MasterCache
             if (key == null)
                 throw new Exception("param 'key' can not be null");
 
-            CallGet cf = new CallGet(true, new FinishedDelegate(this.DefferedCallBack));
+            CallGet cf = new CallGet(false, new FinishedDelegate(this.DefferedCallBack));
 
             //注意，必须先 CreatePromise 再执行 cf.Process，避免因 cf.Process 回调已经产生，而 promise 确没有创建的情况。 
             Promise promise = this.CreatePromise(cf.ID, this.successType, this.failType);

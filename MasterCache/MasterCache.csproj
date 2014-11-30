@@ -53,7 +53,7 @@
   <ItemGroup>
     <Compile Include="BalanceHandler.cs" />
     <Compile Include="Binding.cs" />
-    <Compile Include="Caller\MREContext.cs" />
+    <Compile Include="Caller\WaitingContext.cs" />
     <Compile Include="CallProcessor.cs" />
     <Compile Include="Caller\FinishedDelegate.cs" />
     <Compile Include="DefferedDelegateOfMaster.cs" />

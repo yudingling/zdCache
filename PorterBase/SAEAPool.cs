@@ -1,17 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Net.Sockets;
 
 namespace ZdCache.PorterBase
 {
-    internal class SAEAPool
+    internal class SAEAPool : IDisposable
     {
-        private Stack<SocketAsyncEventArgs> pool;
+        private ConcurrentStack<SocketAsyncEventArgs> pool;
 
-        internal SAEAPool(int capacity)
+        internal SAEAPool()
         {
-            this.pool = new Stack<SocketAsyncEventArgs>(capacity);
+            this.pool = new ConcurrentStack<SocketAsyncEventArgs>();
         }
 
         internal int Count
@@ -21,21 +21,30 @@ namespace ZdCache.PorterBase
 
         internal SocketAsyncEventArgs Pop()
         {
-            lock (this.pool)
-            {
-                if (this.pool.Count > 0)
-                    return this.pool.Pop();
-                else
-                    throw new Exception("SocketAsyncEventArgsPool 中 Item 不足!");
-            }
+            SocketAsyncEventArgs temp;
+            if (this.pool.TryPop(out temp))
+                return temp;
+            else
+                throw new Exception("SocketAsyncEventArgsPool 中 Item 不足!");
         }
 
         internal void Push(SocketAsyncEventArgs item)
         {
-            lock (this.pool)
-            {
-                this.pool.Push(item);
-            }
+            this.pool.Push(item);
         }
+
+        #region IDisposable 成员
+
+        /// <summary>
+        /// 释放非托管的资源
+        /// </summary>
+        public void Dispose()
+        {
+            SocketAsyncEventArgs temp;
+            while (this.pool.TryPop(out temp))
+                temp.Dispose();
+        }
+
+        #endregion
     }
 }
