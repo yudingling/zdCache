@@ -42,7 +42,7 @@ namespace ZdCache.MasterCache.Caller
         public override bool Process(ICollection<SlaveModel> slaveList, ICacheDataType args, out IList<ICacheDataType> retList)
         {
             retList = null;
-            if (slaveList == null || slaveList.Count == 0)
+            if (!this.ProcessEnabled || slaveList == null || slaveList.Count == 0)
                 return false;
 
             //控制总调用时间的超时
@@ -71,7 +71,7 @@ namespace ZdCache.MasterCache.Caller
 
                 this.DoBeforeProcess();
                 this.allCallCount = CallProcessor.Process(slaveList, slaveForSet, this.processedList, masterCallArgForSet, masterCallArgForDel, this);
-                bool isTimeOut = this.DoAfterProcess(timeOutMS);
+                bool isTimeOut = this.DoAfterProcess(this.allCallCount, timeOutMS);
 
                 //action 超时(单个调用超时以及整体超时)，则抛出异常
                 if (isTimeOut || sp.ElapsedMilliseconds > ConstParams.CallTimeOut)

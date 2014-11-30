@@ -54,7 +54,7 @@ namespace ZdCache.MasterCache.Caller
 
             this.DoBeforeProcess();
             this.allCallCount = CallProcessor.Process(slaveList, this.processedList, new MasterCallArgsModel(this.callID, ActionKind.Get, args, FindCallReturn), this);
-            if (this.DoAfterProcess(ConstParams.CallTimeOut))
+            if (this.DoAfterProcess(this.allCallCount, ConstParams.CallTimeOut))
                 throw new Exception("find timeout!");
 
             retList = this.allCallRets;
@@ -72,7 +72,7 @@ namespace ZdCache.MasterCache.Caller
 
             this.DoBeforeProcess();
             this.allCallCount = CallProcessor.Process(slaveList, this.processedList, new MasterCallArgsModel(this.callID, ActionKind.Get, args, FindCallReturn), this);
-            this.DoAfterProcess(0);
+            this.DoAfterProcess(this.allCallCount, 0);
 
             //存在执行的 call 则返回 true
             return this.allCallCount > 0;

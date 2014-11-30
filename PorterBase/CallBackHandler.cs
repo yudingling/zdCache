@@ -17,12 +17,10 @@ namespace ZdCache.PorterBase
         private List<AsyncCall> callList;
         private PorterReceive myCallBack;
 
-        //存储所有的回调列表，此处必须是线程安全的
-        //对于socket 来说，回调参数用完就可以丢弃，所以此处用 queuq 即可 (需要先进先出)
         private ConcurrentQueue<CallBackListArg> argList;
 
-        //控制等待
-        private ManualResetEvent manualRE = new ManualResetEvent(false);
+        //通过信号量控制等待
+        private SemaphoreSlim semaphore = new SemaphoreSlim(0);
 
         /// <summary>
         /// 构造函数
@@ -57,15 +55,14 @@ namespace ZdCache.PorterBase
                     CallBackListArg calBackArg = Pop();
                     if (calBackArg != null)
                     {
+                        //信号量减1
+                        this.semaphore.Wait(0);
+
                         //此方法应该自行处理异常，一般不应该抛出到这
                         this.myCallBack(calBackArg.ID, calBackArg.dataList);
                     }
                     else
-                    {
-                        //如果找不到了，则最多睡眠 1 ms
-                        this.manualRE.Reset();
-                        this.manualRE.WaitOne(1);
-                    }
+                        this.semaphore.Wait(Timeout.Infinite);
                 }
                 catch
                 {
@@ -73,31 +70,18 @@ namespace ZdCache.PorterBase
             }
         }
 
-        //private void WaitInTimeLess()
-        //{
-        //    //以下为实现短时间等待
-        //    //sleep 是以毫秒为单位的，会交出当前线程分配的cpu时间片，转而执行别的线程，直到指定的时间结束，sleep在一定程度上能减少cpu的使用
-        //    //spinwait 是以cpu的时钟周期为单位，让cpu处于自旋转的等待过程，cpu在循环指定的时钟周期期间，线程处于假死，cpu也假死，
-        //    //但线程没有交出所分配的时间片，所以cpu占用是一直存在的
-        //    //结合两者，就能够实现等待很短时间，且能达到只用sleep（1）这样的方式降低cpu使用的效果
-        //    uint loops = 0;
-        //    while (!this.isFinished)
-        //    {
-        //        if (Environment.ProcessorCount == 1 || (++loops % 100) == 0)
-        //        {
-        //            Thread.Sleep(1);
-        //        }
-        //        else
-        //        {
-        //            Thread.SpinWait(20);
-        //        }
-        //        if (sp.ElapsedMilliseconds > timeOut)
-        //        {
-        //            isTimeOut = true;
-        //            break;
-        //        }
-        //    }
-        //}
+        /// <summary>
+        /// 获取一个回调
+        /// </summary>
+        /// <returns></returns>
+        private CallBackListArg Pop()
+        {
+            CallBackListArg arg;
+            if (this.argList.TryDequeue(out arg))
+                return arg;
+            else
+                return null;
+        }
 
         /// <summary>
         /// 添加一个回调
@@ -105,23 +89,19 @@ namespace ZdCache.PorterBase
         /// <param name="arg"></param>
         internal void Push(CallBackListArg arg)
         {
-            if (this.running)
-                this.argList.Enqueue(arg);
+            try
+            {
+                if (this.running)
+                {
+                    this.argList.Enqueue(arg);
 
-            manualRE.Set();
-        }
-
-        /// <summary>
-        /// 获取一个回调
-        /// </summary>
-        /// <returns></returns>
-        internal CallBackListArg Pop()
-        {
-            CallBackListArg arg;
-            if (this.argList.TryDequeue(out arg))
-                return arg;
-            else
-                return null;
+                    //Release 方法达到最大值，会抛出异常，此处需要处理
+                    semaphore.Release();
+                }
+            }
+            catch
+            {
+            }
         }
 
         #region IDisposable 成员
@@ -131,11 +111,11 @@ namespace ZdCache.PorterBase
         /// </summary>
         public void Dispose()
         {
-            while (this.argList.Count > 0)
-                SleepHelper.Sleep(1);
-
             //设置停止标识
             this.running = false;
+
+            while (this.argList.Count > 0)
+                SleepHelper.Sleep(1);
 
             bool stoped = false;
             while (!stoped)
@@ -150,6 +130,12 @@ namespace ZdCache.PorterBase
                     }
                 }
                 SleepHelper.Sleep(100);
+            }
+
+            if (this.semaphore != null)
+            {
+                this.semaphore.Dispose();
+                this.semaphore = null;
             }
         }
 

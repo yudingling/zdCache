@@ -23,21 +23,61 @@ namespace test
             Console.WriteLine(a);
         }
 
+        static SemaphoreSlim seamphore = new SemaphoreSlim(0, 2);
+
         public static void Main()
         {
-            ConcurrentDictionary<int, int> dic = new ConcurrentDictionary<int, int>();
-            dic.TryAdd(1, 2);
-            dic.TryAdd(2, 3);
-            dic.TryAdd(3, 4);
-            dic.TryAdd(34, 4);
-            dic.TryAdd(31, 4);
-            int outTmp;
-
-            Parallel.ForEach<int>(dic.Keys, item =>
-            {
-                if (dic.TryRemove(item, out outTmp))
-                    Console.WriteLine(item);
+            Task.Factory.StartNew(() => {
+                try
+                {
+                    Console.WriteLine("A Start;");
+                    seamphore.Wait(Timeout.Infinite);
+                    Console.WriteLine("A finished;");
+                }
+                catch
+                {
+                    Console.WriteLine("A error");
+                }
             });
+
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    Console.WriteLine("B Start;");
+                    seamphore.Wait(1000);
+                    Console.WriteLine("B finished;");
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine("B error" + ex.Message + ex.StackTrace);
+                }
+            });
+
+            SleepHelper.Sleep(100);
+            seamphore.Release();
+            Console.WriteLine("Release 1;");
+
+
+            SleepHelper.Sleep(100);
+            seamphore.Release();
+            Console.WriteLine("Release 2;");
+
+            SleepHelper.Sleep(100);
+            Console.WriteLine("Current:" + seamphore.CurrentCount);
+
+            seamphore.Release();
+            Console.WriteLine("Current:" + seamphore.CurrentCount);
+            seamphore.Release();
+            Console.WriteLine("Current:" + seamphore.CurrentCount);
+
+            Console.WriteLine("Wait xx:" + seamphore.Wait(0));
+            Console.WriteLine("Wait xx:" + seamphore.Wait(0));
+            Console.WriteLine("Wait xx:" + seamphore.Wait(0));
+            Console.WriteLine("Wait xx:" + seamphore.Wait(0));
+
+            Console.WriteLine("Current:" + seamphore.CurrentCount);
+
 
             Console.ReadLine();
             return;

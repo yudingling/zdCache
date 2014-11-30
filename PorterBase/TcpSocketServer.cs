@@ -39,11 +39,10 @@ namespace ZdCache.PorterBase
             {
                 this.serverSetting = setting;
 
-                //因为只是用于接收socket的连接，并无其他耗时操作，所以并行数是很有限的，10 个足够了
-                this.acceptSAEAPool = new SAEAPool(10);
-                //用于处理数据接收/发送是一个相对耗时的过程，所以并行存在的数量是比较多的，capacity 放大些
-                this.recvSAEAPool = new SAEAPool(1000);
-                this.sendSAEAPool = new SAEAPool(1000);
+                this.acceptSAEAPool = new SAEAPool();
+                this.recvSAEAPool = new SAEAPool();
+                this.sendSAEAPool = new SAEAPool();
+
                 //用于保存已经连接上客户端的 SAEA 对象
                 this.keepAccepttedSAEAList = new ConcurrentDictionary<int, SocketAsyncEventArgs>();
 
@@ -52,8 +51,8 @@ namespace ZdCache.PorterBase
             }
             catch
             {
-                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程），如果异常，需要释放资源
-                base.Close();
+                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程、创建了 saeaPool...），如果异常，需要释放资源
+                this.Close();
                 throw;
             }
         }
@@ -78,8 +77,8 @@ namespace ZdCache.PorterBase
             }
             catch
             {
-                //关闭 this.socket 的时候，
-                //     因为 ProcessAccpet 异步的原因，有时候 this.socket 判断的时候不为null， 但执行到 this.socket.AcceptAsync 时就为 null 了,所以此需要处理
+                //close 被调用时，会将 localSocket 设置为 null，又因为异步的缘故，
+                //       上面的为 this.localSocket != null 判断有时候会失效，需要处理此异常
                 if (acceptSAEA != null)
                     HandleBadAccept(acceptSAEA);
             }
@@ -341,8 +340,6 @@ namespace ZdCache.PorterBase
                     ProcessSend(e);
                     break;
                 default:
-                    //此处不能抛出异常，否则服务停止了
-                    //throw new ArgumentException("the last operation on socket is not a receive or send!");
                     return;
             }
         }
@@ -456,20 +453,32 @@ namespace ZdCache.PorterBase
                 throw new Exception("此 tokenID 对应的客户端不存在，无法向其发送数据！");
         }
 
+        /// <summary>
+        /// 释放资源，注意此方法的实现： 1、顺序是固定。先关闭本地socket，再清除已接收的saea，最后移除 saea pool 中的资源
+        ///                            2、不能将清除引用（比如 saea pool 置为null）。因为异步的关系，可能 close 在调用的过程中，上面的 receive 等方法
+        ///                               还在执行，如果置为 null，将引发异常
+        /// </summary>
         public override void Close()
         {
-            //关闭所有已接收的 socket
-            SocketAsyncEventArgs arg;
-            foreach (int key in this.keepAccepttedSAEAList.Keys)
-            {
-                if (this.keepAccepttedSAEAList.TryGetValue(key, out arg))
-                {
-                    ShutDownClientSocket(arg.AcceptSocket);
-                    CloseClientSocket(arg.AcceptSocket);
-                }
-            }
-            //关闭侦听server
+            //关闭本地 socket
             base.Close();
+
+            //释放已接收的 saea 资源
+            if (this.keepAccepttedSAEAList != null)
+            {
+                foreach (SocketAsyncEventArgs arg in this.keepAccepttedSAEAList.Values)
+                    arg.Dispose();
+            }
+
+            //释放 saea pool 资源
+            if (this.acceptSAEAPool != null)
+                this.acceptSAEAPool.Dispose();
+
+            if (this.sendSAEAPool != null)
+                this.sendSAEAPool.Dispose();
+
+            if (this.recvSAEAPool != null)
+                this.recvSAEAPool.Dispose();
         }
 
         /// <summary>

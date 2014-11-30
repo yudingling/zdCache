@@ -20,16 +20,19 @@ namespace ZdCache.PorterBase
         private SocketClientSettings clientSetting;
 
         //控制连接超时
-        private static ManualResetEvent timeOutObject = new ManualResetEvent(false);
+        private ManualResetEvent connTimeOutMRE;
 
         public SocketClient(SocketClientSettings setting, ErrorTracer tracer)
             : base(setting, tracer)
         {
             try
             {
+                this.connTimeOutMRE = new ManualResetEvent(false);
+
                 this.recvSAEA = CreateNewSAEAForRecvAndSend(TokenUseType.Receive);
+
                 //用于处理数据接收/发送是一个相对耗时的过程，所以并行存在的数量是比较多的，capacity 放大些
-                this.sendSAEAPool = new SAEAPool(1000);
+                this.sendSAEAPool = new SAEAPool();
 
                 this.clientSetting = setting;
 
@@ -37,8 +40,8 @@ namespace ZdCache.PorterBase
             }
             catch
             {
-                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程），如果异常，需要释放资源
-                base.Close();
+                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程、创建了ManualResetEvent...），如果异常，需要释放资源
+                this.Close();
                 throw;
             }
         }
@@ -50,18 +53,16 @@ namespace ZdCache.PorterBase
         /// </summary>
         private void SkForSendConnect()
         {
-            timeOutObject.Reset(); //设置为无信号，则 waitone 方法将中断当前线程
+            connTimeOutMRE.Reset();
+
             this.localSocket.BeginConnect(this.clientSetting.EP, new AsyncCallback(SkForSendConnectCallBack), this.localSocket);
-            //waitone 将阻止当前线程，直到 timeOutObject 对象被 set 或者 超时时间到了
-            if (timeOutObject.WaitOne(this.clientSetting.RecvSendTimeOut, false))
+
+            if (connTimeOutMRE.WaitOne(this.clientSetting.RecvSendTimeOut, false))
             {
                 if (!this.localSocket.Connected)
                     throw new Exception("连接远程服务器失败！");
                 else
-                {
-                    //开始接收
                     StartReceive();
-                }
             }
             else
             {
@@ -81,8 +82,7 @@ namespace ZdCache.PorterBase
             }
             finally
             {
-                //设置为有信号， waitone 返回true
-                timeOutObject.Set();
+                connTimeOutMRE.Set();
             }
         }
 
@@ -112,66 +112,81 @@ namespace ZdCache.PorterBase
             }
             catch
             {
-                //关闭客户端的连接的时候，触发了 ProcessReceive 事件，但 SocketError 却是 success， 
-                //然后再到此方法的 recvSAEA.AcceptSocket.ReceiveAsync 时就报错，对这种情况需要进行处理
+                //close 被调用时，触发了 ProcessReceive 事件，但 SocketError 却是 success， 
+                //  然后再到此方法的 recvSAEA.AcceptSocket.ReceiveAsync 时就报错，对这种情况需要进行处理
                 HandleBadRecv(recvSAEA);
             }
         }
 
         /// <summary>
-        /// SAEA 接收完后，对接收的数据进行处理
+        /// SAEA 接收完后，对接收的数据进行处理。
+        ///    注意：此处需要对整个过程进行 try catch 因为，传过来的参数 recSAEA 在 close 方法被调用时设置为 null
         /// </summary>
         private void ProcessReceive(SocketAsyncEventArgs recSAEA)
         {
-            UToken token = recSAEA.UserToken as UToken;
-
-            if (recSAEA.SocketError != SocketError.Success)
+            try
             {
-                //执行到这表示接收数据出错了
-                HandleBadRecv(recSAEA);
-                //返回，结束一个 recv 过程
-                return;
+                UToken token = recSAEA.UserToken as UToken;
+
+                if (recSAEA.SocketError != SocketError.Success)
+                {
+                    //执行到这表示接收数据出错了
+                    HandleBadRecv(recSAEA);
+                    //返回，结束一个 recv 过程
+                    return;
+                }
+
+                //对接收到的数据进行处理
+                List<CallBackListArg> cbArgList = new List<CallBackListArg>();
+                List<string> errors = new List<string>();
+
+                if (SAEAByteHandler.HandleRecv(recSAEA, token, this.clientSetting.MySizeGetter, cbArgList, errors))
+                {
+                    //接收完成，重置 token
+                    token.Reset();
+                }
+
+                if (cbArgList.Count > 0)
+                {
+                    foreach (CallBackListArg item in cbArgList)
+                        this.callBackHandler.Push(item);
+                }
+
+                if (errors.Count > 0)
+                {
+                    foreach (string msg in errors)
+                        this.TraceError(ErrorType.Receive, token.ID, msg);
+                }
+
+                //继续读取 (读取未读取完的数据，或者开启一个新的读取)
+                StartReceive();
             }
-
-            //对接收到的数据进行处理
-            List<CallBackListArg> cbArgList = new List<CallBackListArg>();
-            List<string> errors = new List<string>();
-
-            if (SAEAByteHandler.HandleRecv(recSAEA, token, this.clientSetting.MySizeGetter, cbArgList, errors))
+            catch
             {
-                //接收完成，重置 token
-                token.Reset();
             }
-
-            if (cbArgList.Count > 0)
-            {
-                foreach (CallBackListArg item in cbArgList)
-                    this.callBackHandler.Push(item);
-            }
-
-            if (errors.Count > 0)
-            {
-                foreach (string msg in errors)
-                    this.TraceError(ErrorType.Receive, token.ID, msg);
-            }
-
-            //继续读取 (读取未读取完的数据，或者开启一个新的读取)
-            StartReceive();
         }
 
         /// <summary>
-        /// 处理失败的数据接收
+        /// 处理失败的数据接收。 
+        ///    注意，此处为什么要 try catch 整个过程呢，因为在 socketClient close 时，会将 recSAEA 置为 null，而又因为异步的关系
+        ///    访问 recSAEA 将抛出异常
         /// </summary>
         /// <param name="recSAEA"></param>
         private void HandleBadRecv(SocketAsyncEventArgs recSAEA)
         {
-            UToken token = recSAEA.UserToken as UToken;
+            try
+            {
+                UToken token = recSAEA.UserToken as UToken;
 
-            //重置 token
-            token.Reset();
+                //重置 token
+                token.Reset();
 
-            //重新连接
-            ReConnect();
+                //重新连接
+                ReConnect();
+            }
+            catch
+            {
+            }
         }
 
         /// <summary>
@@ -192,21 +207,28 @@ namespace ZdCache.PorterBase
 
         /// <summary>
         /// 异步发送数据
+        ///   注意，整个过程需要 try catch，因为 close 方法被调用时，localSocket 会被设置为 null
         /// </summary>
         private void StartSend(SocketAsyncEventArgs sendSAEA)
         {
-            //设置发送缓冲区
-            UToken token = sendSAEA.UserToken as UToken;
+            try
+            {
+                //设置发送缓冲区
+                UToken token = sendSAEA.UserToken as UToken;
 
-            sendSAEA.SetBuffer(token.Buffer, token.OffSet, token.Buffer.Length - token.OffSet);
+                sendSAEA.SetBuffer(token.Buffer, token.OffSet, token.Buffer.Length - token.OffSet);
 
-            //进行异步发送
-            bool ret = this.localSocket.SendAsync(sendSAEA);
+                //进行异步发送
+                bool ret = this.localSocket.SendAsync(sendSAEA);
 
-            //如果 SendAsync 返回值为 false，表示 SendAsync 操作被同步执行了，SAEA 对象的 Completed 事件将不会被执行
-            //则此时需要进行手动调用 ProcessSend
-            if (!ret)
-                ProcessSend(sendSAEA);
+                //如果 SendAsync 返回值为 false，表示 SendAsync 操作被同步执行了，SAEA 对象的 Completed 事件将不会被执行
+                //则此时需要进行手动调用 ProcessSend
+                if (!ret)
+                    ProcessSend(sendSAEA);
+            }
+            catch
+            {
+            }
         }
 
         /// <summary>
@@ -325,7 +347,7 @@ namespace ZdCache.PorterBase
 
         #endregion
 
-        #region override socketbase 
+        #region override socketbase
 
         /// <summary>
         /// 初始化 socket client
@@ -368,6 +390,30 @@ namespace ZdCache.PorterBase
             }
             else
                 throw new Exception("socket 为空，发送失败！");
+        }
+
+        /// <summary>
+        /// 释放资源，注意此方法的实现： 1、顺序是固定。先关闭本地socket，再清除saea资源
+        ///                            2、recvSAEA 可以设置为 null，相关的方法都已 try catch 处理了，但 sendSAEAPool 不能将清除引用
+        /// </summary>
+        public override void Close()
+        {
+            base.Close();
+
+            if (this.connTimeOutMRE != null)
+            {
+                this.connTimeOutMRE.Dispose();
+                this.connTimeOutMRE = null;
+            }
+
+            if (this.recvSAEA != null)
+            {
+                this.recvSAEA.Dispose();
+                this.recvSAEA = null;
+            }
+
+            if (this.sendSAEAPool != null)
+                this.sendSAEAPool.Dispose();
         }
 
         /**

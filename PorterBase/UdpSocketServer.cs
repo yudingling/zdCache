@@ -9,11 +9,6 @@ using ZdCache.PorterBase.Setting;
 
 namespace ZdCache.PorterBase
 {
-    /// <summary>
-    /// Socket Server with UDP Protocol
-    /// 1、window 下的 IOCP 实现 （SocketAsyncEventArgs）
-    /// 2、2层独立 send/receive , callback
-    /// </summary>
     public class UdpSocketServer : SocketBase
     {
         //数据接收/发送的 SAEA 池
@@ -36,9 +31,9 @@ namespace ZdCache.PorterBase
             try
             {
                 this.serverSetting = setting;
-                //用于处理数据接收/发送是一个相对耗时的过程，所以并行存在的数量是比较多的，capacity 放大些
-                this.recvSAEAPool = new SAEAPool(1000);
-                this.sendSAEAPool = new SAEAPool(1000);
+                this.recvSAEAPool = new SAEAPool();
+                this.sendSAEAPool = new SAEAPool();
+
                 //用于保存已经连接上客户端的 SAEA 对象
                 this.keepAccepttedSAEAList = new ConcurrentDictionary<int, SocketAsyncEventArgs>();
 
@@ -47,8 +42,8 @@ namespace ZdCache.PorterBase
             }
             catch
             {
-                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程），如果异常，需要释放资源
-                base.Close();
+                //存在有限资源的分配（SocketBase 中的 callBackHandler 分配了线程、创建了 saeaPool...），如果异常，需要释放资源
+                this.Close();
                 throw;
             }
         }
@@ -81,7 +76,8 @@ namespace ZdCache.PorterBase
             }
             catch
             {
-                //关闭socket 时，触发了 ProcessReceive 事件，但此时 socket 已不能用，对这种情况需要进行处理
+                //close 被调用时，会将 localSocket 设置为 null，又因为异步的缘故，
+                //       上面的为 this.localSocket != null 判断有时候会失效，需要处理此异常
                 if (recvSAEA != null)
                     HandleBadRecv(recvSAEA);
             }
@@ -156,16 +152,9 @@ namespace ZdCache.PorterBase
                     this.TraceError(ErrorType.Receive, token.ID, msg);
             }
 
-            //判断此 recvSAEA 是否需要继续接收
-            if (isfinishedRecv)
-            {
-                //执行到此， 则表示此 SAEA 接收完成了， 此 recvSAEA 对象的回收
-                HandleBadRecv(recvSAEA);
-            }
-            else
-            {
+            //判断此 recvSAEA 是否需要继续接收， 已接收完成，则由业务逻辑决定何时复用此 saea (dropClient 后复用)，否则继续接收
+            if (!isfinishedRecv)
                 StartReceive(recvSAEA);
-            }
         }
 
         /// <summary>
@@ -270,8 +259,6 @@ namespace ZdCache.PorterBase
                     ProcessSend(e);
                     break;
                 default:
-                    //此处不能抛出异常，否则服务停止了
-                    //throw new ArgumentException("the last operation on socket is not a receive or send!");
                     return;
             }
         }
@@ -376,6 +363,31 @@ namespace ZdCache.PorterBase
         public override void DropClient(int tokenID)
         {
             RemoveKeepAccepttedSAEAList(tokenID);
+        }
+
+        /// <summary>
+        /// 释放资源，注意此方法的实现： 1、顺序是固定。先关闭本地socket，再清除已接收的saea，最后移除 saea pool 中的资源
+        ///                            2、不能将清除引用（比如 saea pool 置为null）。因为异步的关系，可能 close 在调用的过程中，上面的 receive 等方法
+        ///                               还在执行，如果置为 null，将引发异常
+        /// </summary>
+        public override void Close()
+        {
+            //关闭本地 socket
+            base.Close();
+
+            //释放 keepAccepttedSAEAList 中的资源
+            if (this.keepAccepttedSAEAList != null)
+            {
+                foreach (SocketAsyncEventArgs arg in this.keepAccepttedSAEAList.Values)
+                    arg.Dispose();
+            }
+
+            //释放 saea pool 资源
+            if (this.sendSAEAPool != null)
+                this.sendSAEAPool.Dispose();
+
+            if (this.recvSAEAPool != null)
+                this.recvSAEAPool.Dispose();
         }
 
         #endregion

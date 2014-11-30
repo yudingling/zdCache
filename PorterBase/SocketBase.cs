@@ -52,7 +52,10 @@ namespace ZdCache.PorterBase
                     this.localSocket = null;
                 }
             }
-            //释放 callbackhandler
+
+            //释放 callbackhandler。
+            //   注意，此处不能将 callBackHandler 引用置为null， 因为涉及到异步的问题， 
+            //   close 调用时依然有可能用到 callBackHandler 参数（比如 tcpServer 中 saea 的 receive 回调）
             if (this.callBackHandler != null)
                 this.callBackHandler.Dispose();
         }
