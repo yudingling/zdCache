@@ -111,29 +111,34 @@ namespace ZdCache.PorterBase
         /// </summary>
         public void Dispose()
         {
-            //设置停止标识
-            this.running = false;
-
-            while (this.argList.Count > 0)
-                SleepHelper.Sleep(1);
-
-            bool stoped = false;
-            while (!stoped)
-            {
-                stoped = true;
-                foreach (AsyncCall call in this.callList)
-                {
-                    if (call != null && call.IsAlive)
-                    {
-                        stoped = false;
-                        break;
-                    }
-                }
-                SleepHelper.Sleep(100);
-            }
-
             if (this.semaphore != null)
             {
+                //设置停止标识
+                this.running = false;
+
+                while (this.argList.Count > 0)
+                    SleepHelper.Sleep(1);
+
+                //给信号，使线程结束
+                for (int i = 0; i < this.callList.Count; i++)
+                    this.semaphore.Release();
+
+                bool stoped = false;
+                while (!stoped)
+                {
+                    stoped = true;
+                    this.semaphore.Release();
+                    foreach (AsyncCall call in this.callList)
+                    {
+                        if (call != null && call.IsAlive)
+                        {
+                            stoped = false;
+                            break;
+                        }
+                    }
+                    SleepHelper.Sleep(100);
+                }
+
                 this.semaphore.Dispose();
                 this.semaphore = null;
             }
