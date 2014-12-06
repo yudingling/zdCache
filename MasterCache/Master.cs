@@ -10,6 +10,7 @@ using ZdCache.Common.CacheCommon;
 using System.Threading.Tasks;
 using ZdCache.PorterBase;
 using ZdCache.Common.DefferCallBack;
+using System.Management;
 
 namespace ZdCache.MasterCache
 {
@@ -39,7 +40,7 @@ namespace ZdCache.MasterCache
                     System.Net.Sockets.ProtocolType.Tcp,
                     recvAndSendTimeout,
                     new DefaultSizeGetter(),
-                    4);
+                    GetCpuCoreCount());
 
                 this.myBinding = new Binding(setting, new PorterBase.ErrorTracer(PBLogError));
 
@@ -55,6 +56,27 @@ namespace ZdCache.MasterCache
                 this.Dispose();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// 获取cpu核心数
+        /// </summary>
+        private int GetCpuCoreCount()
+        {
+            try
+            {
+                ManagementClass mc = new ManagementClass("Win32_Processor");
+                ManagementObjectCollection mObjList = mc.GetInstances();
+                foreach (ManagementObject mObj in mObjList)
+                {
+                    return int.Parse(mObj.Properties["NumberOfLogicalProcessors"].Value.ToString());
+                }
+            }
+            catch
+            {
+            }
+
+            return 4;
         }
 
         private void PBLogError(ErrorType errorType, int tokenID, string error)

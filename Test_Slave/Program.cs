@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using ZdCache.SlaveCache;
 using System.Configuration;
-using ZdCache.Common;
 
-namespace ZdCache.SlaveCache
+namespace Test_Slave
 {
     class Program
     {

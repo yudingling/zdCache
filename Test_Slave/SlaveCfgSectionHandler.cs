@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Configuration;
 using System.Xml;
+using ZdCache.SlaveCache;
 
-namespace ZdCache.SlaveCache
+namespace Test_Slave
 {
     internal class SlaveCfgSectionHandler : IConfigurationSectionHandler
     {
