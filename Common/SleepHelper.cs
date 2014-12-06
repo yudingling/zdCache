@@ -94,7 +94,8 @@ namespace ZdCache.Common
         public static void RemoveResetEvent()
         {
             ManualResetEvent outValue;
-            AllResetEvent.TryRemove(Thread.CurrentThread, out outValue);
+            if (AllResetEvent.TryRemove(Thread.CurrentThread, out outValue))
+                outValue.Dispose();
         }
 
         /// <summary>
@@ -104,7 +105,8 @@ namespace ZdCache.Common
         public static void RemoveResetEvent(Thread thread)
         {
             ManualResetEvent outValue;
-            AllResetEvent.TryRemove(thread, out outValue);
+            if (AllResetEvent.TryRemove(thread, out outValue))
+                outValue.Dispose();
         }
 
         #endregion
