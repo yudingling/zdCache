@@ -13,6 +13,8 @@ namespace ZdCache.Common.DefferCallBack
         private int curThenCount = 0;
         private SemaphoreSlim semaphore;
 
+        private object lockObj = new object();
+
         /// <summary>
         /// 存储此 promise 挂载的回调列表。 key 回调类型
         /// </summary>
@@ -50,25 +52,29 @@ namespace ZdCache.Common.DefferCallBack
         /// <param name="callBacks"></param>
         public Promise Then(params Delegate[] callBacks)
         {
-            if (this.semaphore != null && Interlocked.Increment(ref this.curThenCount) <= maxThenCount)
+            //此处需要lock，因为异步的原因， Emit 执行完后，就会调用 Dispose 方法，导致 semaphore 不可用
+            lock (this.lockObj)
             {
-                if (callBacks != null && callBacks.Length > 0)
+                if (this.semaphore != null && Interlocked.Increment(ref this.curThenCount) <= maxThenCount)
                 {
-                    ConcurrentQueue<Delegate> queue;
-                    foreach (Delegate curDelegate in callBacks)
+                    if (callBacks != null && callBacks.Length > 0)
                     {
-                        if (curDelegate != null)
+                        ConcurrentQueue<Delegate> queue;
+                        foreach (Delegate curDelegate in callBacks)
                         {
-                            if (this.callBackDic.TryGetValue(curDelegate.GetType(), out queue))
-                                queue.Enqueue(curDelegate);
+                            if (curDelegate != null)
+                            {
+                                if (this.callBackDic.TryGetValue(curDelegate.GetType(), out queue))
+                                    queue.Enqueue(curDelegate);
+                            }
                         }
                     }
+
+                    this.semaphore.Release();
                 }
 
-                this.semaphore.Release();
+                return this;
             }
-
-            return this;
         }
 
         /// <summary>
@@ -107,10 +113,13 @@ namespace ZdCache.Common.DefferCallBack
         /// </summary>
         public void Dispose()
         {
-            if (this.semaphore != null)
+            lock (this.lockObj)
             {
-                this.semaphore.Dispose();
-                this.semaphore = null;
+                if (this.semaphore != null)
+                {
+                    this.semaphore.Dispose();
+                    this.semaphore = null;
+                }
             }
         }
 
