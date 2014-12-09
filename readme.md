@@ -9,7 +9,7 @@
              master.GetAsync(...)
 
         针对异步，提供jquery deffered 的逼格去传递回调方法：
-             master.GetAsync(...).then(successedA, failedA).then(successedB, failedB).then(failedC)...
+             master.GetAsync(...).then(successedA, failedA).then(failedB)...
 
      4、可扩展的 master 负载均衡策略、slave 缓存过期策略
 
