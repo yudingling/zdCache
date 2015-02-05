@@ -17,7 +17,7 @@ namespace ZdCache.MasterCache.Caller
     /// </summary>
     public class CallSet : Call
     {
-        private bool isSuccess = false;
+        private volatile bool isSuccess = false;
 
         private BalanceHandler myBalancer;
 

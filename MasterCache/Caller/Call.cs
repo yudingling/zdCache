@@ -33,7 +33,7 @@ namespace ZdCache.MasterCache.Caller
         ///     但这影响了代码的可读性与原本设计意图)，
         ///     
         /// </summary>
-        private bool processEnabled = true;
+        private volatile bool processEnabled = true;
 
         /// <summary>
         /// 标志每个Call，唯一
@@ -146,7 +146,7 @@ namespace ZdCache.MasterCache.Caller
         /// </summary>
         private bool DoFinishProcess()
         {
-            //保证中被执行一次，因为 DoFinishProcess 有可能被多次调用（情形：waitContext.StartWaiting 刚好超时，同时 waitContext.CallBackHappend 返回了 true）。
+            //保证被执行一次，因为 DoFinishProcess 有可能被多次调用（情形：waitContext.StartWaiting 刚好超时，同时 waitContext.CallBackHappend 返回了 true）。
             //如果成功执行到了则返回 true
             if (Interlocked.Increment(ref this.doFinishProcessCallCount) == 1)
             {

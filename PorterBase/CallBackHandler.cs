@@ -12,7 +12,7 @@ namespace ZdCache.PorterBase
     /// </summary>
     public class CallBackHandler : IDisposable
     {
-        private bool running = true;
+        private volatile bool running = true;
 
         private List<AsyncCall> callList;
         private PorterReceive myCallBack;

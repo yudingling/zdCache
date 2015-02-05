@@ -19,7 +19,7 @@ namespace ZdCache.SlaveCache
         //唯一id
         private string id = "";
 
-        private bool running = true;
+        private volatile bool running = true;
 
         private DataFromBinding onData;
         private SendErrorFromBinding onSendError;

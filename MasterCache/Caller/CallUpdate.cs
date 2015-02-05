@@ -16,7 +16,7 @@ namespace ZdCache.MasterCache.Caller
     /// </summary>
     public class CallUpdate : Call
     {
-        protected bool isSuccess = false;
+        protected volatile bool isSuccess = false;
 
         #region 构造函数
 

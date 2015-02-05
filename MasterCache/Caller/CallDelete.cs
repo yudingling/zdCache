@@ -15,7 +15,7 @@ namespace ZdCache.MasterCache.Caller
     /// </summary>
     public class CallDelete : Call
     {
-        protected bool isSuccess = false;
+        protected volatile bool isSuccess = false;
 
         #region 构造函数
 

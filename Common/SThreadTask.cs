@@ -25,10 +25,11 @@ namespace ZdCache.Common
         private AsyncAbortMethod abortExecuteMethod;
 
         //用于标识是否继续 thread 的 while 循环， 当调用 Stop 强制结束 Task 的时候，需要通过此标志来继续线程
-        private bool continueLoop = false;
+        //注意，需要 volatile 修饰
+        private volatile bool continueLoop = false;
         private Thread thread;
         //标识线程是否还在执行
-        private bool isThreadAlive = false;
+        private volatile bool isThreadAlive = false;
 
         //任务完成后的回调
         private ThreadTaskFinished callBack;

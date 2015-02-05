@@ -60,7 +60,8 @@ namespace ZdCache.Common
 
         private static string defaultPreName = "Default";
 
-        private static bool running = true;
+        //注意，此参数使用 volatile 修饰
+        private static volatile bool running = true;
         //写文件线程的最大数量, 一个 PreName 对应一个线程
         private const int MaxWriteThreadCount = 4;
         //存储等待处理的 preName
