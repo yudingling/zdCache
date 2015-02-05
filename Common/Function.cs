@@ -5,11 +5,33 @@ using System.Text;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Diagnostics;
+using System.Management;
 
 namespace ZdCache.Common
 {
     public class Function
     {
+        /// <summary>
+        /// 获取cpu核心数
+        /// </summary>
+        public static int GetCpuCoreCount()
+        {
+            try
+            {
+                ManagementClass mc = new ManagementClass("Win32_Processor");
+                ManagementObjectCollection mObjList = mc.GetInstances();
+                foreach (ManagementObject mObj in mObjList)
+                {
+                    return int.Parse(mObj.Properties["NumberOfLogicalProcessors"].Value.ToString());
+                }
+            }
+            catch
+            {
+            }
+
+            return 4;
+        }
+
         /// <summary>
         /// byte 数组转换为 hex string
         /// </summary>

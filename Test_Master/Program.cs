@@ -23,7 +23,7 @@ namespace Test_Master
     {
         static void Main(string[] args)
         {
-            int count = 100000;
+            int count = 10000;
             Master master = new Master(12998, 2000);
 
             SetInDefaultCategory set1 = new SetInDefaultCategory(count, master);
@@ -35,7 +35,7 @@ namespace Test_Master
             Console.ReadLine();
             set1.Start();
             //set2.Start();
-            SleepHelper.Sleep(40000);
+            Console.ReadLine();
             get1_Async.Start();
             //get2.Start();
 

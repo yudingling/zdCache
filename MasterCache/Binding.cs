@@ -150,6 +150,14 @@ namespace ZdCache.MasterCache
                     AddNewRegisterID(registerID, registerID, tokenID);
                     AddNewTokenID(oldID, tokenID);
                 }
+                else
+                {
+                    //如果 oldID=tokenID 但却找不到 slave，则表示是在超时中被移除了（非重连导致的超时）,需要加进去
+                    if (this.slaves.TryGetValue(tokenID, out tempModel))
+                        return tempModel;
+                    else
+                        AddNewTokenID(-1, tokenID);
+                }
             }
             else
             {

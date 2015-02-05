@@ -74,15 +74,21 @@ namespace ZdCache.PorterBase
         {
             try
             {
-                Socket sk = ar.AsyncState as Socket;
-                sk.EndConnect(ar);
+                try
+                {
+                    Socket sk = ar.AsyncState as Socket;
+                    sk.EndConnect(ar);
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    connTimeOutMRE.Set();
+                }
             }
             catch
             {
-            }
-            finally
-            {
-                connTimeOutMRE.Set();
             }
         }
 

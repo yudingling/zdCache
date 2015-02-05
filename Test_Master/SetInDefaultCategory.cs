@@ -38,7 +38,7 @@ namespace Test_Master
                 sp.Start();
 
                 long size = 0;
-                UserInfo ui = new UserInfo() { Name = "DefaultCategory", age = 26, Prov = "This is a test of an object blah blah es, serialization does not seem to slow things down so much.  The gzip compression is ", Data = new byte[2] };
+                UserInfo ui = new UserInfo() { Name = "DefaultCategory", age = 26, Prov = "This is a test of an object blah blah es, serialization does not seem to slow things down so much.  The gzip compression is ", Data = new byte[58200] };
                 List<byte[]> data = Function.GetBytesFromSerializableObj(ui, ConstParams.BufferBlockSize, ref size);
 
                 while (this.setCount-- > 0)

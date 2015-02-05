@@ -47,7 +47,6 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Data" />
-    <Reference Include="System.Management" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BalanceHandler.cs" />
