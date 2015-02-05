@@ -20,9 +20,9 @@ namespace ZdCache.Common
         //线程锁
         private AutoResetEvent locks;
 
-        private AsyncArgs asArg;
-        private AsyncMethod asMethod;
-        private AsyncAbortMethod abortExecuteMethod;
+        private volatile AsyncArgs asArg;
+        private volatile AsyncMethod asMethod;
+        private volatile AsyncAbortMethod abortExecuteMethod;
 
         //用于标识是否继续 thread 的 while 循环， 当调用 Stop 强制结束 Task 的时候，需要通过此标志来继续线程
         //注意，需要 volatile 修饰
