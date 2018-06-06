@@ -1,0 +1,60 @@
+      
+feign:
+  hystrix:
+    enabled: true
+  okhttp:
+    enabled: true
+  httpclient:
+    enabled: false
+    # 默认值 200，该值 okhttp 也会使用，见 @OkHttpFeignLoadBalancedConfiguration
+    max-connections: 10000 
+    # 默认值 50，该值 okhttp 也会使用
+    max-connections-per-route: 1000
+  serviceVersion:
+    autoreport: v0
+
+ribbon:
+  # 配置见 @DefaultClientConfigImpl
+  # 每个路由连接大小, 默认值 50
+  MaxConnectionsPerHost: 1000
+  # 连接池大小，默认值 200 （MaxConnectionsPerHost * 路由的个数）
+  MaxTotalConnections: 10000
+  # 默认值 200
+  PoolMaxThreads: 10000
+  # 默认值 2000
+  ConnectTimeout: 2000 
+  # 默认值 5000
+  ReadTimeout: 8000  
+  
+
+# 配置参考 https://github.com/Netflix/Hystrix/wiki/Configuration
+hystrix:
+  threadpool:
+    default:
+      # 并发执行的最大线程数。默认10，基本的原则是保持线程池尽可能小，他主要是为了释放压力，防止资源被阻塞, 当一切都是正常的时候，线程池一般仅会有1到2个线程激活来提供服务。计算方法： 每秒最大支撑的请求数 * (99%的请求平均响应时间[秒] + 缓存值)
+      coreSize: 50
+      maximumSize: 1000
+      # 默认值 false, 跟 maximumSize 和 keepAliveTimeMinutes 搭配使用，必须为 ture, maximumSize 才能起作用。 表示当超过 coreSize 时，会产生新的线程来执行，当线程不再使用时，会等待 keepAliveTimeMinutes 分钟后释放掉
+      allowMaximumSizeToDivergeFromCoreSize: true
+      # maximumSize>coreSize 时生效
+      keepAliveTimeMinutes: 1  
+      # 默认值 -1。当设为－1，会使用SynchronousQueue，值为正时使用LinkedBlcokingQueue
+      maxQueueSize: -1 
+  command:
+    default:
+      execution:
+        isolation:
+          # 隔离模式，有两种 SEMAPHORE/THREAD, 默认采用 THREAD
+          strategy: THREAD  
+          thread:
+            # 隔离时间，默认值 1000， 此值一般要大于  [(ribbonReadTimeout + ribbonConnectTimeout) * (maxAutoRetries[默认0] + 1) * (maxAutoRetriesNextServer[默认1] + 1)] (太小会导致很多正常业务失败，太大会影响熔断效果，甚至雪崩)
+            timeoutInMilliseconds: 20000  
+            
+
+spring:
+  mvc:
+    # 统一 404 的错误为异常，而不是跳转到 /error 链接
+    throw-exception-if-no-handler-found: true 
+  resources:
+    # rest 服务原则上不能为资源建议 mapping
+    add-mappings: false
