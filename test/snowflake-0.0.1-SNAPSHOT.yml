@@ -52,8 +52,6 @@ hystrix:
             
 
 spring:
-  application:
-    version: @appVersion@
   mvc:
     # 统一 404 的错误为异常，而不是跳转到 /error 链接
     throw-exception-if-no-handler-found: true 
